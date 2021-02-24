@@ -125,18 +125,77 @@ function Render3DObjects(){
 
 //#region 2D
 function Interpolate(i0, d0, i1, d1){
-    if(i0 == i1){
-        return [d0];
-    }
+    // if(i0 == i1){
+    //     return [d0];
+    // }
 
     let values = [];
-    const a = ((d1 - d0) / (i1 - i0));
-    let d = d0;
+    // const a = ((d1 - d0) / (i1 - i0));
+    // let d = d0;
 
-    for(let i = i0; i < i1; ++i){
-        values.push(Math.floor(d));
-        d += a;
+    // for(let i = i0; i < i1; ++i){
+    //     values.push(Math.floor(d));
+    //     d += a;
+    // }
+
+    let dx = i1 - i0;
+    let dy = d1 - d0;
+    
+    let stepX = 1, stepY = 1;
+    
+    if(dx < 0){
+        stepX = -1;
     }
+    if(dy < 0){
+        stepY = -1;
+    }
+    console.log(dx, dy, stepX, stepY);
+
+    values.push(d0);
+    
+    // down to 1
+    if((i1 - i0) - (d1 - d0) > 0){
+        console.log("down")
+        let increase = 2 * stepY;
+        let friction = increase - stepX;
+    
+        for(let i = i0, j = d0; i <= i1; i += stepX){
+            friction += increase;
+    
+            if(friction >= 0){
+                ++j;
+                friction -= 2 * stepY;
+    
+                values.push(j);
+            }
+        }
+
+        if((i1 - i0 + 1) != values.length){
+            console.log((i1 - i0 + 1), "개 --- ", values.length);
+        }
+    }
+    // up to 1
+    else{
+        console.log("up")
+        let increase = 2 * stepY;
+        let friction = increase - stepX;
+
+        for(let i = d0, j = i0; i <= d1; i += stepY){
+            friction += increase;
+
+            if(friction >= 0){
+                ++j
+                friction -= 2 * stepX;
+
+                values.push(i);
+            }
+        }
+        
+        if((d1 - d0 + 1) != values.length){
+            console.log((d1 - d0 + 1), "개 --- ", values.length);
+        }
+    }
+    // console.log(values);
 
     return values;
 }
@@ -215,9 +274,11 @@ function DrawWireframeTriangle(P0, P1, P2, color){
 }
 
 function DrawFillTriangle(P0, P1, P2, color){
+    console.log(1, P0, P1, P2);
     if(P1.y < P0.y) { let temp = P0; P0 = P1; P1 = temp; }
     if(P2.y < P0.y) { let temp = P0; P0 = P2; P2 = temp; }
     if(P2.y < P1.y) { let temp = P1; P1 = P2; P2 = temp; }
+    console.log(2, P0, P1, P2);
 
     let x01 = Interpolate(P0.y, P0.x, P1.y, P1.x);  // 0 to 1
     let x12 = Interpolate(P1.y, P1.x, P2.y, P2.x);  // 1 to 2
@@ -396,21 +457,32 @@ function RenderTriangle(triangle, projected){
     );
 }
 function MakeModels(){
-    models.push(new Model(
-        "cube1", vertices, triangles, 
-        new Transform(
-            new Vector3(-2, -2, 5), new Vector3(0, 0, 0), 1
-        ), 
-        new Vector3(0, 0, 0), Math.sqrt(3)
-    ));
-    models.push(new Model(
-        "cube2", vertices, triangles, 
-        new Transform(
-            new Vector3(4, 4, 10), new Vector3(0, 0, 0), 2
-        ), 
-        new Vector3(0, 0, 0), Math.sqrt(3)
-    ));
-    models.push(GenerateSphere(15, GREEN));
+    // models.push(new Model(
+    //     "cube1", vertices, triangles, 
+    //     new Transform(
+    //         new Vector3(-2, -2, 5), new Vector3(0, 0, 0), 1
+    //     ), 
+    //     new Vector3(0, 0, 0), Math.sqrt(3)
+    // ));
+    // models.push(new Model(
+    //     "cube2", vertices, triangles, 
+    //     new Transform(
+    //         new Vector3(4, 4, 10), new Vector3(0, 0, 0), 2
+    //     ), 
+    //     new Vector3(0, 0, 0), Math.sqrt(3)
+    // ));
+    // models.push(GenerateSphere(15, GREEN));
+    models.push(new Model("Plane", 
+    [
+        new Vector3(-1, -1, 0), new Vector3(1, -1, 0), 
+        new Vector3(-1, 1, 0), new Vector3(1, 1, 0)
+    ], 
+    [
+        new Triangle([0, 2, 1], new Color(255, 255, 255, 255), []), 
+        // new Triangle([1, 2, 3], new Color(0, 255, 255, 255), [])
+    ], 
+    new Transform(new Vector3(0, 0, 5), new Vector3(0, 0, 0), 1), 
+    new Vector3(0, 0, 0), 1));
 }
 
 function RenderModel(){
@@ -435,6 +507,8 @@ function RenderModel(){
             );
         }
         
+        console.log(model);
+        console.log(projected);
         for(let j = 0; j < model.triangles.length; ++j){
             RenderTriangle(model.triangles[j], projected);
         }
