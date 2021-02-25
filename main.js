@@ -141,79 +141,60 @@ function BasicInterpolate(i0, d0, i1, d1){
     return values;
 }
 function Interpolate(i0, d0, i1, d1){
-    // if(i0 == i1){
-    //     return [d0];
-    // }
-
     let values = [];
-    // const a = ((d1 - d0) / (i1 - i0));
-    // let d = d0;
+    
+    if(Math.abs(i1 - i0) > Math.abs(d1 - d0)){
+        console.log("down");
+        let step = 1;
+        if(d1 < d0){
+            step = -1;
+        }
 
-    // for(let i = i0; i < i1; ++i){
-    //     values.push(Math.floor(d));
-    //     d += a;
-    // }
+        let di = i1 - i0;
+        let dd = d1 - d0;
+        let abdd = Math.abs(dd);
 
-    let dx = i1 - i0;
-    let dy = d1 - d0;
-    
-    let stepX = 1, stepY = 1;
-    
-    if(dx < 0){
-        stepX = -1;
-    }
-    if(dy < 0){
-        stepY = -1;
-    }
-    console.log("y delta:", dx, "x delta:", dy)
-
-    // down to 1
-    if(dx > dy){
-        let increase = 2 * dy;
-        let friction;
-        if(dy < 0){
-            friction = increase - dx;
-        }
-        else{
-            friction = increase + dx;
-        }
-        console.log("up", increase, friction)
-    
-        for(let i = i0, j = d0; i <= i1; i += stepX){
-            friction += increase;
-    
-            if(friction <= 0){
-                j += stepY;
-                friction -= 2 * dx;
-    
-            }
-            values.push(j);
-        }
-    }
-    // up to 1
-    else{
-        let increase = 2 * dx;
-        let friction;
-        if(dx < 0){
-            friction = increase - dy;
-        }
-        else{
-            friction = increase + dy;
-        }
-        console.log("down", increase, friction)
-
-        for(let i = d0, j = i0; i <= d1; i += stepY){
+        let increase = 2 * abdd;
+        let friction = -di;
+        
+        for(let y = d1, x = d0; y <= i1; ++i){
             friction += increase;
 
             if(friction >= 0){
-                ++j
-                friction -= 2 * dy;
-                
+                friction -= 2 * di;
+                x += step;
             }
-            values.push(i);
+
+            values.push(x);
         }
     }
-    // console.log(values);
+    else{
+        let step = 1;
+        if(d1 < d0){
+            step = -1;
+        }
+        
+        let di = i1 - i0;
+        let dd = d1 - d0;
+        let abdd = Math.abs(dd);
+        
+        let increase = 2 * di;
+        let friction = -abdd;
+        console.log("up step:", step, "di dd: ", di, dd);
+
+        for(let x = d0, y = i0; x != d1; x += step){
+            friction += increase;
+
+            if(friction >= 0){
+                friction -= 2 * abdd;
+                ++y;
+
+                values.push(x);
+            }
+        }
+    }
+
+    console.log(values);
 
     return values;
 }
@@ -257,7 +238,6 @@ function DrawLine(P0, P1, color) {
 
     if(dx > dy){
         if(P0.x > P1.x){
-            // Vector2.Swap(P0, P1);
             let temp = new Vector2(P0.x, P0.y);
             P0 = P1;
             P1 = temp;
@@ -271,7 +251,6 @@ function DrawLine(P0, P1, color) {
     }
     else{
         if(P0.y > P1.y){
-            // Vector2.Swap(P0, P1);
             let temp = new Vector2(P0.x, P0.y);
             P0 = P1;
             P1 = temp;
@@ -297,9 +276,9 @@ function DrawFillTriangle(P0, P1, P2, color){
     if(P2.y < P0.y) { let temp=P0; P0=P2; P2=temp; }
     if(P2.y < P1.y) { let temp=P1; P1=P2; P2=temp; }
 
-    if(P1.x > P0.x) { let temp=P0; P0=P1; P1=temp; }
+    if(P1.x > P0.x && P1.y == P0.y) { let temp=P0; P0=P1; P1=temp; }
     // if(P2.x > P0.x) { let temp=P0; P0=P2; P2=temp; }
-    // if(P2.x > P1.x) { let temp=P1; P1=P2; P2=temp; }
+    if(P2.x < P1.x && P2.y == P1.y) { let temp=P1; P1=P2; P2=temp; }
 
     console.log(P0, P1, P2)
 
@@ -416,13 +395,22 @@ function GenerateSphere(divs, color) {
         vertexes.push(vertex);
       }
     }
+
+    function CreateColor(){
+        return new Color(
+            (Math.random()), 
+            (Math.random()), 
+            (Math.random()), 
+            255
+        )
+    }
   
     // Generate triangles.
     for (var d = 0; d < divs; d++) {
       for (var i = 0; i < divs - 1; i++) {
         var i0 = d*divs + i;
-        triangleses.push(new Triangle([i0, i0+divs+1, i0+1], color, [vertexes[i0], vertexes[i0+divs+1], vertexes[i0+1]]));
-        triangleses.push(new Triangle([i0, i0+divs, i0+divs+1], color, [vertexes[i0], vertexes[i0+divs], vertexes[i0+divs+1]]));
+        triangleses.push(new Triangle([i0, i0+divs+1, i0+1], CreateColor(), [vertexes[i0], vertexes[i0+divs+1], vertexes[i0+1]]));
+        triangleses.push(new Triangle([i0, i0+divs, i0+divs+1], CreateColor(), [vertexes[i0], vertexes[i0+divs], vertexes[i0+divs+1]]));
       }
     }
   
@@ -431,30 +419,38 @@ function GenerateSphere(divs, color) {
     new Vector3(0, 0, 0), 1);
   }
 function MakeTriangles(){
-    triangles.push(new Triangle([0, 1, 2], Color.Red()));
-    triangles.push(new Triangle([0, 2, 3], Color.Red()));
-    triangles.push(new Triangle([4, 0, 3], Color.Green()));
-    triangles.push(new Triangle([4, 3, 7], Color.Green()));
-    triangles.push(new Triangle([5, 4, 7], Color.Blue()));
-    triangles.push(new Triangle([5, 7, 6], Color.Blue()));
-    triangles.push(new Triangle([1, 5, 6], Color.Yellow()));
-    triangles.push(new Triangle([1, 6, 2], Color.Yellow()));
-    triangles.push(new Triangle([4, 5, 1], Color.Purple()));
-    triangles.push(new Triangle([4, 1, 0], Color.Purple()));
-    triangles.push(new Triangle([2, 6, 7], Color.Cyan()));
-    triangles.push(new Triangle([2, 7, 3], Color.Cyan()));
-    // triangles.push(new Triangle([0, 1, 2], Color.White()));
-    // triangles.push(new Triangle([0, 2, 3], Color.White()));
-    // triangles.push(new Triangle([4, 0, 3], Color.White()));
-    // triangles.push(new Triangle([4, 3, 7], Color.White()));
-    // triangles.push(new Triangle([5, 4, 7], Color.White()));
-    // triangles.push(new Triangle([5, 7, 6], Color.White()));
-    // triangles.push(new Triangle([1, 5, 6], Color.White()));
-    // triangles.push(new Triangle([1, 6, 2], Color.White()));
-    // triangles.push(new Triangle([4, 5, 1], Color.White()));
-    // triangles.push(new Triangle([4, 1, 0], Color.White()));
-    // triangles.push(new Triangle([2, 6, 7], Color.White()));
-    // triangles.push(new Triangle([2, 7, 3], Color.White()));
+    function CreateColor(){
+        return new Color(
+            (Math.random()), 
+            (Math.random()), 
+            (Math.random()), 
+            255);
+    }
+    // triangles.push(new Triangle([0, 1, 2], Color.Red()));
+    // triangles.push(new Triangle([0, 2, 3], Color.Red()));
+    // triangles.push(new Triangle([4, 0, 3], Color.Green()));
+    // triangles.push(new Triangle([4, 3, 7], Color.Green()));
+    // triangles.push(new Triangle([5, 4, 7], Color.Blue()));
+    // triangles.push(new Triangle([5, 7, 6], Color.Blue()));
+    // triangles.push(new Triangle([1, 5, 6], Color.Yellow()));
+    // triangles.push(new Triangle([1, 6, 2], Color.Yellow()));
+    // triangles.push(new Triangle([4, 5, 1], Color.Purple()));
+    // triangles.push(new Triangle([4, 1, 0], Color.Purple()));
+    // triangles.push(new Triangle([2, 6, 7], Color.Cyan()));
+    // triangles.push(new Triangle([2, 7, 3], Color.Cyan()));
+
+    triangles.push(new Triangle([0, 1, 2], CreateColor()));
+    triangles.push(new Triangle([0, 2, 3], CreateColor()));
+    triangles.push(new Triangle([4, 0, 3], CreateColor()));
+    triangles.push(new Triangle([4, 3, 7], CreateColor()));
+    triangles.push(new Triangle([5, 4, 7], CreateColor()));
+    triangles.push(new Triangle([5, 7, 6], CreateColor()));
+    triangles.push(new Triangle([1, 5, 6], CreateColor()));
+    triangles.push(new Triangle([1, 6, 2], CreateColor()));
+    triangles.push(new Triangle([4, 5, 1], CreateColor()));
+    triangles.push(new Triangle([4, 1, 0], CreateColor()));
+    triangles.push(new Triangle([2, 6, 7], CreateColor()));
+    triangles.push(new Triangle([2, 7, 3], CreateColor()));
 }
 function MakeDepthBuffer(){
     depthBuffer = new Array();
@@ -487,18 +483,18 @@ function RenderTriangle(triangle, projected){
     );
 }
 function MakeModels(){
-    models.push(new Model(
-        "cube1", vertices, triangles, 
-        new Transform(
-            new Vector3(-2.8, -2.8, 5), new Vector3(0, 0, 0), 1
-        ), 
-        new Vector3(0, 0, 0), Math.sqrt(3)
-    ));
+    // models.push(new Model(
+    //     "cube1", vertices, triangles, 
+    //     new Transform(
+    //         new Vector3(-2.8, -2.8, 5), new Vector3(0, 0, 0), 1
+    //     ), 
+    //     new Vector3(0, 0, 0), Math.sqrt(3)
+    // ));
 
     // models.push(new Model(
     //     "cube2", vertices, triangles, 
     //     new Transform(
-    //         new Vector3(4, 4, 10), new Vector3(0, 0, 0), 2
+    //         new Vector3(5.8, 5.8, 10), new Vector3(0, 0, 0), 2
     //     ), 
     //     new Vector3(0, 0, 0), Math.sqrt(3)
     // ));
@@ -514,7 +510,7 @@ function MakeModels(){
     //     new Triangle([0, 2, 1], new Color(0, 0, 255, 255), []), 
     //     new Triangle([1, 2, 3], new Color(0, 255, 0, 255), [])
     // ], 
-    // new Transform(new Vector3(0, 0, 5), new Vector3(0, 0, 0), 1), 
+    // new Transform(new Vector3(0, 0, 5), new Vector3(0, 0, Math.PI / 4), 1), 
     // new Vector3(0, 0, 0), 1));
 }
 
@@ -532,16 +528,21 @@ function RenderModel(){
         }
 
         let triangles = CullBackFace(model, camera, matrix);
-        // model.triangles = triangles;
+        model.triangles = triangles;
         
         for(let j = 0; j < model.vertices.length; ++j){
             projected.push(
                 ProjectVertex(matrix.MultiplyVector3(model.vertices[j]))
             );
         }
-        
         for(let j = 0; j < model.triangles.length; ++j){
-            RenderTriangle(model.triangles[j], projected);
+            if(model.name == "Sphere"){
+                if(j <= 2)
+                    RenderTriangle(model.triangles[j], projected);
+            }
+            else{
+                RenderTriangle(model.triangles[j], projected);
+            }
         }
     }
 }
