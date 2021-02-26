@@ -1,9 +1,16 @@
+import Vector3 from "./Vector3";
+
 export default class Vector4{
     constructor(_x, _y, _z, _w){
-        this.x = _x;
-        this.y = _y;
-        this.z = _z;
-        this.w = _w;
+        if(_x instanceof Vector3){
+
+        }
+        else{
+            this.x = _x;
+            this.y = _y;
+            this.z = _z;
+            this.w = _w;
+        }
     }
 
     FromVector3(vector3){

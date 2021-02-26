@@ -31,4 +31,8 @@ export default class Color{
     static Cyan(){
         return new Color(0, 255, 255, 255);
     }
+    static Random(){
+        return new Color(
+            Math.floor(Math.random() * 255), Math.floor(Math.random() * 255), Math.floor(Math.random() * 255), 255);
+    }
 }

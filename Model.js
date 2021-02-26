@@ -1,5 +1,33 @@
 import Matrix3x3 from "./Matrix3x3.js"
 import Matrix4x4 from "./Matrix4x4.js"
+import Vector3 from "./Vector3.js"
+import Triangle from "./Triangle.js"
+import Color from "./Color.js"
+
+var vertices = [
+    new Vector3(1, 1, 1), 
+    new Vector3(-1, 1, 1), 
+    new Vector3(-1, -1, 1), 
+    new Vector3(1, -1, 1), 
+    new Vector3(1, 1, -1), 
+    new Vector3(-1, 1, -1), 
+    new Vector3(-1, -1, -1), 
+    new Vector3(1, -1, -1)
+];
+var triangles = [
+    new Triangle([0, 1, 2], Color.Red()     , [new Vertex( 0,  0,  1), new Vertex( 0,  0,  1), new Vertex( 0,  0,  1)]), 
+    new Triangle([0, 2, 3], Color.Red()     , [new Vertex( 0,  0,  1), new Vertex( 0,  0,  1), new Vertex( 0,  0,  1)]), 
+    new Triangle([4, 0, 3], Color.Green()   , [new Vertex( 1,  0,  0), new Vertex( 1,  0,  0), new Vertex( 1,  0,  0)]), 
+    new Triangle([4, 3, 7], Color.Green()   , [new Vertex( 1,  0,  0), new Vertex( 1,  0,  0), new Vertex( 1,  0,  0)]), 
+    new Triangle([5, 4, 7], Color.Blue()    , [new Vertex( 0,  0, -1), new Vertex( 0,  0, -1), new Vertex( 0,  0, -1)]), 
+    new Triangle([5, 7, 6], Color.Blue()    , [new Vertex( 0,  0, -1), new Vertex( 0,  0, -1), new Vertex( 0,  0, -1)]), 
+    new Triangle([1, 5, 6], Color.Yellow()  , [new Vertex(-1,  0,  0), new Vertex(-1,  0,  0), new Vertex(-1,  0,  0)]), 
+    new Triangle([1, 6, 2], Color.Yellow()  , [new Vertex(-1,  0,  0), new Vertex(-1,  0,  0), new Vertex(-1,  0,  0)]), 
+    new Triangle([4, 5, 1], Color.Purple()  , [new Vertex( 0,  1,  0), new Vertex( 0,  1,  0), new Vertex( 0,  1,  0)]), 
+    new Triangle([4, 1, 0], Color.Purple()  , [new Vertex( 0,  1,  0), new Vertex( 0,  1,  0), new Vertex( 0,  1,  0)]), 
+    new Triangle([2, 6, 7], Color.Cyan()    , [new Vertex( 0, -1,  0), new Vertex( 0, -1,  0), new Vertex( 0, -1,  0)]), 
+    new Triangle([2, 7, 3], Color.Cyan()    , [new Vertex( 0, -1,  0), new Vertex( 0, -1,  0), new Vertex( 0, -1,  0)])
+];
 
 export default class Model{
     constructor(_name, _vertices, _triangles, _transform, _center, _radius){
@@ -9,6 +37,41 @@ export default class Model{
         this.transform = _transform;
         this.center = _center;
         this.radius = _radius;
+    }
+
+    static CreateCube(_name, _transform, _center, _radius){
+        return new Model(_name, vertices, triangles, _transform, _center, _radius);
+    }
+    static CreateSphere(divs, color, _name, _transform, _center, _radius){
+        var vertexes = [];
+        var triangleses = [];
+    
+        var delta_angle = 2.0*Math.PI / divs;
+    
+        // Generate vertexes and normals.
+        for (var d = 0; d < divs + 1; d++) {
+            var y = (2.0 / divs) * (d - divs/2);
+            var radius = Math.sqrt(1.0 - y*y);
+            for (var i = 0; i < divs; i++) {
+                var vertex = new Vector3(
+                        radius*Math.cos(i*delta_angle), 
+                        y, 
+                        radius*Math.sin(i*delta_angle)
+                    );
+                vertexes.push(vertex);
+            }
+        }
+    
+        // Generate triangles.
+        for (var d = 0; d < divs; d++) {
+            for (var i = 0; i < divs - 1; i++) {
+                var i0 = d*divs + i;
+                triangleses.push(new Triangle([i0, i0+divs+1, i0+1], color, [vertexes[i0], vertexes[i0+divs+1], vertexes[i0+1]]));
+                triangleses.push(new Triangle([i0, i0+divs, i0+divs+1], color, [vertexes[i0], vertexes[i0+divs], vertexes[i0+divs+1]]));
+            }
+        }
+    
+        return new Model(_name, vertexes, triangleses, _transform, _center, _radius);
     }
 
     Translate(){

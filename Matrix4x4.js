@@ -84,4 +84,13 @@ export default class Matrix4x4{
             this.d1*mat.a4+this.d2*mat.b4+this.d1*mat.c4+this.d4*mat.d4 
         )
     }
+
+    Transpose(){
+        return new Matrix4x4(
+            this.a1, this.b1, this.c1, this.d1, 
+            this.a2, this.b2, this.c2, this.d2, 
+            this.a3, this.b3, this.c3, this.d3, 
+            this.a4, this.b4, this.c4, this.d4
+        )
+    }
 }

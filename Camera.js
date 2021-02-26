@@ -1,5 +1,6 @@
 import Matrix3x3 from "./Matrix3x3.js";
 import Matrix4x4 from "./Matrix4x4.js";
+import Rect from "./Rect.js";
 import Vector3 from "./Vector3.js";
 
 class Plane{
@@ -69,5 +70,13 @@ export default class Camera{
             Math.sin(-this.transform.rotation.z), Math.cos(-this.transform.rotation.z), 0, 
             0, 0, 1
         )
+    }
+
+    GetViewport(){
+        let theta = this.fov / 2;
+        return new Rect(0, 0, 
+            2 * this.d * Math.tan(theta * Math.PI / 180), 
+            2 * this.d * Math.tan(theta * Math.PI / 180)
+            );
     }
 }
