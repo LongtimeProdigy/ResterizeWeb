@@ -16,6 +16,12 @@ export default class Camera{
         this.d = d;
         this.fov = fov;
 
+        this.transform.rotation = new Vector3(
+            this.transform.rotation.x * Math.PI / 180, 
+            this.transform.rotation.y * Math.PI / 180, 
+            this.transform.rotation.z * Math.PI / 180
+        )
+
         this.clipPlanes = [];
         this.CalcClipPlaneFomulas();
     }
@@ -39,15 +45,35 @@ export default class Camera{
         let rotateMat3 = x.Multiply3x3(y.Multiply3x3(z));
 
         let rotateMat4 = Matrix4x4.FromMatrix3x3(rotateMat3);
-        let locatedMat4 = rotateMat4.AddLocate(new Vector3(
-            -this.transform.position.x, 
-            -this.transform.position.y, 
-            -this.transform.position.z
-        ));
+        // let locatedMat4 = rotateMat4.AddLocate(new Vector3(
+        //     -this.transform.position.x, 
+        //     -this.transform.position.y, 
+        //     -this.transform.position.z
+        // ));
+        let locatedMat4 = this.LocateMatrix();
 
-        let completeMat4 = locatedMat4.AddScale(1);
+        let returnMatrix = rotateMat4.Multiply4x4(locatedMat4);
 
-        return completeMat4;
+        return returnMatrix;
+    }
+    GetRotateMatrix(){
+        let x = this.RotateXMatrix();
+        let y = this.RotateYMatrix();
+        let z = this.RotateZMatrix();
+
+        let rotateMat3 = x.Multiply3x3(y.Multiply3x3(z));
+
+        let rotateMat4 = Matrix4x4.FromMatrix3x3(rotateMat3);
+        // let locatedMat4 = rotateMat4.AddLocate(new Vector3(
+        //     -this.transform.position.x, 
+        //     -this.transform.position.y, 
+        //     -this.transform.position.z
+        // ));
+        // let locatedMat4 = this.LocateMatrix();
+
+        // let returnMatrix = rotateMat4.Multiply4x4(locatedMat4);
+
+        return rotateMat4;
     }
 
     RotateXMatrix(){
@@ -59,9 +85,9 @@ export default class Camera{
     }
     RotateYMatrix(){
         return new Matrix3x3(
-            Math.cos(-this.transform.rotation.y), 0, Math.sin(-this.transform.rotation.y), 
+            Math.cos(-this.transform.rotation.y), 0, -Math.sin(-this.transform.rotation.y), 
             0, 1, 0, 
-            -Math.sin(-this.transform.rotation.y), 0, Math.cos(-this.transform.rotation.y)
+            Math.sin(-this.transform.rotation.y), 0, Math.cos(-this.transform.rotation.y)
         )
     }
     RotateZMatrix(){
@@ -69,6 +95,14 @@ export default class Camera{
             Math.cos(-this.transform.rotation.z), -Math.sin(-this.transform.rotation.z), 0, 
             Math.sin(-this.transform.rotation.z), Math.cos(-this.transform.rotation.z), 0, 
             0, 0, 1
+        )
+    }
+    LocateMatrix(){
+        return new Matrix4x4(
+            1, 0, 0, -this.transform.position.x, 
+            0, 1, 0, -this.transform.position.y, 
+            0, 0, 1, -this.transform.position.z, 
+            0, 0, 0, 1
         )
     }
 

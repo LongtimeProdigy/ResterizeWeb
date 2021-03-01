@@ -17,26 +17,35 @@ export default class Vector3{
             );
     }
 
-    Add(vec2){
+    static Add(vec1, vec2){
         return new Vector3(
-            this.x + vec2.x, 
-            this.y + vec2.y, 
-            this.z + vec2.z
+            vec1.x + vec2.x, 
+            vec1.y + vec2.y, 
+            vec1.z + vec2.z
         );
     }
-    Minus(vec2){
+    static Minus(vec1, vec2){
         return new Vector3(
-            this.x - vec2.x, 
-            this.y - vec2.y, 
-            this.z - vec2.z
+            vec1.x - vec2.x, 
+            vec1.y - vec2.y, 
+            vec1.z - vec2.z
         );
     }
 
-    MultiplyScalar(num){
+    static MultiplyScalar(vec, num){
         return new Vector3(
-            this.x * num, 
-            this.y * num, 
-            this.z * num
+            vec.x * num, 
+            vec.y * num, 
+            vec.z * num
         );
+    }
+
+    Length() {
+        return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+    }
+
+    Normalized(){
+        let length = this.Length();
+        return new Vector3(this.x / length, this.y / length, this.z / length);
     }
 }

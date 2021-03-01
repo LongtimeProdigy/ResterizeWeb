@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta content="pandoc" name="generator"/>
 <meta content="width=device-width, initial-scale=1.0, user-scalable=yes" name="viewport"/>
-<title>Lighting and Shading demo - Computer Graphics from scratch - Gabriel Gambetta</title>
+<title>Texture mapping demo - Computer Graphics from scratch - Gabriel Gambetta</title>
 <style type="text/css">code{white-space: pre;}</style>
 <link href="/css/style.css" rel="stylesheet"/>
 <!--[if lt IE 9]>
@@ -28,35 +28,18 @@
 <div style="clear:both;"></div>
 <!--
 -->
-<h1 id="lighting-and-shading-demo">Lighting and Shading demo</h1>
-<p>This demo implements <a href="../03-light.html">Lighting</a> and <a href="../13-shading.html">Shading</a>.</p>
-<p>You can enable <a href="../03-light.html#diffuse-reflection">Diffuse Reflection</a>, <a href="../03-light.html#specular-reflection">Specular Reflection</a>, or both. Independently of this, you can choose between the <a href="../13-shading.html#flat-shading">Flat</a>, <a href="../13-shading.html#gouraud-shading">Gouraud</a> and <a href="../13-shading.html#phong-shading">Phong</a> shading models. Finally, you can choose whether to use vertex normals from the model, or the normals of each triangle.</p>
+<h1 id="texture-mapping-demo">Texture mapping demo</h1>
+<p>This demo implements <a href="../14-textures.html">texture mapping</a>. You can choose whether to use perspective-correct interpolated depth values (1/z) or not, to see the difference it has on the output.</p>
 <div class="centered">
 <canvas height="600" id="canvas" style="border: 1px grey solid" width="600">
 </canvas>
 <table class="cgfs-demo-controls">
 <tr>
 <td>
-<b>Lighting model</b>
+<b>Depth buffer values</b>
 </td>
 <td class="text-left">
-<input id="lm-diffuse" name="lighting-model" onclick="SetLightingModel(LM_DIFFUSE);" type="radio"/><label for="lm-diffuse">Diffuse only</label><br/> <input id="lm-specular" name="lighting-model" onclick="SetLightingModel(LM_SPECULAR);" type="radio"/><label for="lm-specular">Specular only</label><br/> <input checked="" id="lm-both" name="lighting-model" onclick="SetLightingModel(LM_DIFFUSE | LM_SPECULAR);" type="radio"/><label for="lm-both">Diffuse + Specular</label>
-</td>
-</tr>
-<tr>
-<td>
-<b>Shading model</b>
-</td>
-<td class="text-left">
-<input id="sm-flat" name="shading-model" onclick="SetShadingModel(SM_FLAT);" type="radio"/><label for="sm-flat">Flat</label><br/> <input id="sm-gouraud" name="shading-model" onclick="SetShadingModel(SM_GOURAUD);" type="radio"/><label for="sm-gouraud">Gouraud</label><br/> <input checked="" id="sm-phong" name="shading-model" onclick="SetShadingModel(SM_PHONG);" type="radio"/><label for="sm-phong">Phong</label>
-</td>
-</tr>
-<tr>
-<td>
-<b>Normals</b>
-</td>
-<td class="text-left">
-<input id="vn-off" name="vertex-normals" onclick="SetUseVertexNormals(false)" type="radio"/><label for="vn-off">Computed triangle normals</label><br/> <input checked="" id="vn-on" name="vertex-normals" onclick="SetUseVertexNormals(true)" type="radio"/><label for="vn-on">Vertex normals from model</label>
+<input name="perspective-correct-depth" onclick="SetUsePerspectiveCorrectDepth(false)" type="radio"/><label for="pcd-off">Linear (z)</label><br/> <input checked="" name="perspective-correct-depth" onclick="SetUsePerspectiveCorrectDepth(true)" type="radio"/><label for="pcd-on">Perspective-correct (1/z)</label>
 </td>
 </tr>
 </table>
@@ -184,12 +167,14 @@ var Identity4x4 = Mat4x4([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]
 
 
 // A Triangle.
-var Triangle = function(indexes, color, normals) {
-  if (!(this instanceof Triangle)) { return new Triangle(indexes, color, normals); }
+var Triangle = function(indexes, color, normals, texture, uvs) {
+  if (!(this instanceof Triangle)) { return new Triangle(indexes, color, normals, texture, uvs); }
 
   this.indexes = indexes;
   this.color = color;
   this.normals = normals;
+  this.texture = texture;
+  this.uvs = uvs;
 }
 
 
@@ -248,6 +233,43 @@ var Light = function(type, intensity, vector) {
   this.intensity = intensity;
   this.vector = vector;
 }
+
+
+// A Texture.
+var Texture = function(url) {
+  if (!(this instanceof Texture)) { return new Texture(url); }
+
+  this.image = new Image();
+  this.image.src = url;
+
+  var texture = this;
+
+  this.image.onload = function() {
+    texture.iw = texture.image.width;
+    texture.ih = texture.image.height;
+
+    texture.canvas = document.createElement("canvas");
+    texture.canvas.width = texture.iw;
+    texture.canvas.height = texture.ih;
+    var c2d = texture.canvas.getContext("2d");
+    c2d.drawImage(texture.image, 0, 0, texture.iw, texture.ih);
+    texture.pixel_data = c2d.getImageData(0, 0, texture.iw, texture.ih);
+  }
+}
+
+Texture.prototype.getTexel = function(u, v) {
+  var iu = (u*this.iw) | 0;
+  var iv = (v*this.ih) | 0;
+
+  var offset = (iv*this.iw*4 + iu*4);
+
+  return [
+    this.pixel_data.data[offset + 0],
+    this.pixel_data.data[offset + 1],
+    this.pixel_data.data[offset + 2]
+  ];
+}
+
 
 
 // ======================================================================
@@ -506,39 +528,33 @@ var ComputeIllumination = function(vertex, normal, camera, lights) {
     }
 
     // Diffuse component.
-    if (LightingModel & LM_DIFFUSE) {
-      var cos_alpha = Dot(vl, normal) / (Magnitude(vl) * Magnitude(normal));
-      if (cos_alpha > 0) {
-        illumination += cos_alpha * light.intensity;
-      }
+    var cos_alpha = Dot(vl, normal) / (Magnitude(vl) * Magnitude(normal));
+    if (cos_alpha > 0) {
+      illumination += cos_alpha * light.intensity;
     }
 
     // Specular component.
-    if (LightingModel & LM_SPECULAR) {
-      var reflected = Add(Multiply(2*Dot(normal, vl), normal), Multiply(-1, vl));
-      var view = Add(camera.position, Multiply(-1, vertex));
+    var reflected = Add(Multiply(2*Dot(normal, vl), normal), Multiply(-1, vl));
+    var view = Add(camera.position, Multiply(-1, vertex));
 
-      var cos_beta = Dot(reflected, view) / (Magnitude(reflected) * Magnitude(view));
-      if (cos_beta > 0) {
-        var specular = 50;
-        illumination += Math.pow(cos_beta, specular) * light.intensity;
-      }
+    var cos_beta = Dot(reflected, view) / (Magnitude(reflected) * Magnitude(view));
+    if (cos_beta > 0) {
+      var specular = 50;
+      illumination += Math.pow(cos_beta, specular) * light.intensity;
     }
   }
   return illumination;
 }
 
 
-var LM_DIFFUSE = 1;
-var LM_SPECULAR = 2;
-
 var SM_FLAT = 0;
 var SM_GOURAUD = 1;
 var SM_PHONG = 2;
 
-var LightingModel = LM_DIFFUSE | LM_SPECULAR;
 var ShadingModel = SM_PHONG;
 var UseVertexNormals = true;
+var UsePerspectiveCorrectDepth = true;
+
 
 var EdgeInterpolate = function(y0, v0, y1, v1, y2, v2) {
   var v01 = Interpolate(y0, v0, y1, v1);
@@ -551,14 +567,6 @@ var EdgeInterpolate = function(y0, v0, y1, v1, y2, v2) {
 
 
 var RenderTriangle = function(triangle, vertexes, projected, camera, lights, orientation) {
-  // Sort by projected point Y.
-  var indexes = SortedVertexIndexes(triangle.indexes, projected);
-  var [i0, i1, i2] = indexes;
-
-  var v0 = vertexes[triangle.indexes[i0]];
-  var v1 = vertexes[triangle.indexes[i1]];
-  var v2 = vertexes[triangle.indexes[i2]];
-
   // Compute triangle normal. Use the unsorted vertexes, otherwise the winding of the points may change.
   var normal = ComputeTriangleNormal(vertexes[triangle.indexes[0]], vertexes[triangle.indexes[1]], vertexes[triangle.indexes[2]]);
 
@@ -568,14 +576,34 @@ var RenderTriangle = function(triangle, vertexes, projected, camera, lights, ori
     return;
   }
 
-  // Get attribute values (X, 1/Z) at the vertexes.
-  var p0 = projected[triangle.indexes[i0]];
-  var p1 = projected[triangle.indexes[i1]];
-  var p2 = projected[triangle.indexes[i2]];
+  // Sort by projected point Y.
+  var indexes = SortedVertexIndexes(triangle.indexes, projected);
+  var [i0, i1, i2] = indexes;
+  var [v0, v1, v2] = [ vertexes[triangle.indexes[i0]], vertexes[triangle.indexes[i1]], vertexes[triangle.indexes[i2]] ];
+
+  // Get attribute values (X, 1/Z, U/Z, U/Z) at the vertexes.
+  var [p0, p1, p2] = [ projected[triangle.indexes[i0]], projected[triangle.indexes[i1]], projected[triangle.indexes[i2]] ];
 
   // Compute attribute values at the edges.
   var [x02, x012] = EdgeInterpolate(p0.y, p0.x, p1.y, p1.x, p2.y, p2.x);
   var [iz02, iz012] = EdgeInterpolate(p0.y, 1.0/v0.z, p1.y, 1.0/v1.z, p2.y, 1.0/v2.z);
+  if (triangle.texture) {
+    if (UsePerspectiveCorrectDepth) {
+      var [uz02, uz012] = EdgeInterpolate(p0.y, triangle.uvs[i0].x / v0.z,
+                                          p1.y, triangle.uvs[i1].x / v1.z,
+                                          p2.y, triangle.uvs[i2].x / v2.z);
+      var [vz02, vz012] = EdgeInterpolate(p0.y, triangle.uvs[i0].y / v0.z,
+                                          p1.y, triangle.uvs[i1].y / v1.z,
+                                          p2.y, triangle.uvs[i2].y / v2.z);
+    } else {
+      var [uz02, uz012] = EdgeInterpolate(p0.y, triangle.uvs[i0].x,
+                                          p1.y, triangle.uvs[i1].x,
+                                          p2.y, triangle.uvs[i2].x);
+      var [vz02, vz012] = EdgeInterpolate(p0.y, triangle.uvs[i0].y,
+                                          p1.y, triangle.uvs[i1].y,
+                                          p2.y, triangle.uvs[i2].y);
+    }
+  }
 
   if (UseVertexNormals) {
     var transform = MultiplyMM4(Transposed(camera.orientation), orientation);
@@ -616,6 +644,9 @@ var RenderTriangle = function(triangle, vertexes, projected, camera, lights, ori
     var [nx_left, nx_right] = [nx02, nx012];
     var [ny_left, ny_right] = [ny02, ny012];
     var [nz_left, nz_right] = [nz02, nz012];
+
+    var [uz_left, uz_right] = [uz02, uz012];
+    var [vz_left, vz_right] = [vz02, vz012];
   } else {
     var [x_left, x_right] = [x012, x02];
     var [iz_left, iz_right] = [iz012, iz02];
@@ -624,6 +655,9 @@ var RenderTriangle = function(triangle, vertexes, projected, camera, lights, ori
     var [nx_left, nx_right] = [nx012, nx02];
     var [ny_left, ny_right] = [ny012, ny02];
     var [nz_left, nz_right] = [nz012, nz02];
+
+    var [uz_left, uz_right] = [uz012, uz02];
+    var [vz_left, vz_right] = [vz012, vz02];
   }
 
 
@@ -648,6 +682,11 @@ var RenderTriangle = function(triangle, vertexes, projected, camera, lights, ori
       var nzscan = Interpolate(xl, nzl, xr, nzr);
     }
 
+    if (triangle.texture) {
+      var uzscan = Interpolate(xl, uz_left[y - p0.y], xr, uz_right[y - p0.y]);
+      var vzscan = Interpolate(xl, vz_left[y - p0.y], xr, vz_right[y - p0.y]);
+    }
+
     for (var x = xl; x <= xr; x++) {
       var inv_z = zscan[x - xl];
       if (UpdateDepthBufferIfCloser(x, y, inv_z)) {
@@ -662,7 +701,20 @@ var RenderTriangle = function(triangle, vertexes, projected, camera, lights, ori
           var intensity = ComputeIllumination(vertex, normal, camera, lights);
         }
 
-        PutPixel(x, y, MultiplyColor(triangle.color, intensity));
+        if (triangle.texture) {
+          if (UsePerspectiveCorrectDepth) {
+            var u = uzscan[x - xl] / zscan[x - xl];
+            var v = vzscan[x - xl] / zscan[x - xl];
+          } else {
+            var u = uzscan[x - xl];
+            var v = vzscan[x - xl];
+          }
+          color = triangle.texture.getTexel(u, v);
+        } else {
+          color = triangle.color;
+        }
+
+        PutPixel(x, y, MultiplyColor(color, intensity));
       }
     }
   }
@@ -797,30 +849,29 @@ var YELLOW = [255, 255, 0];
 var PURPLE = [255, 0, 255];
 var CYAN = [0, 255, 255];
 
+var wood_texture = Texture("crate-texture.jpg");
+
 var triangles = [
-  Triangle([0, 1, 2], RED,    [Vertex( 0,  0,  1), Vertex( 0,  0,  1), Vertex( 0,  0,  1)]),
-  Triangle([0, 2, 3], RED,    [Vertex( 0,  0,  1), Vertex( 0,  0,  1), Vertex( 0,  0,  1)]),
-  Triangle([4, 0, 3], GREEN,  [Vertex( 1,  0,  0), Vertex( 1,  0,  0), Vertex( 1,  0,  0)]),
-  Triangle([4, 3, 7], GREEN,  [Vertex( 1,  0,  0), Vertex( 1,  0,  0), Vertex( 1,  0,  0)]),
-  Triangle([5, 4, 7], BLUE,   [Vertex( 0,  0, -1), Vertex( 0,  0, -1), Vertex( 0,  0, -1)]),
-  Triangle([5, 7, 6], BLUE,   [Vertex( 0,  0, -1), Vertex( 0,  0, -1), Vertex( 0,  0, -1)]),
-  Triangle([1, 5, 6], YELLOW, [Vertex(-1,  0,  0), Vertex(-1,  0,  0), Vertex(-1,  0,  0)]),
-  Triangle([1, 6, 2], YELLOW, [Vertex(-1,  0,  0), Vertex(-1,  0,  0), Vertex(-1,  0,  0)]),
-  Triangle([1, 0, 5], PURPLE, [Vertex( 0,  1,  0), Vertex( 0,  1,  0), Vertex( 0,  1,  0)]),
-  Triangle([5, 0, 4], PURPLE, [Vertex( 0,  1,  0), Vertex( 0,  1,  0), Vertex( 0,  1,  0)]),
-  Triangle([2, 6, 7], CYAN,   [Vertex( 0, -1,  0), Vertex( 0, -1,  0), Vertex( 0, -1,  0)]),
-  Triangle([2, 7, 3], CYAN,   [Vertex( 0, -1,  0), Vertex( 0, -1,  0), Vertex( 0, -1,  0)]),
+  Triangle([0, 1, 2], RED,    [Vertex( 0,  0,  1), Vertex( 0,  0,  1), Vertex( 0,  0,  1)], wood_texture, [Pt(0, 0), Pt(1, 0), Pt(1, 1)]),
+  Triangle([0, 2, 3], RED,    [Vertex( 0,  0,  1), Vertex( 0,  0,  1), Vertex( 0,  0,  1)], wood_texture, [Pt(0, 0), Pt(1, 1), Pt(0, 1)]),
+  Triangle([4, 0, 3], GREEN,  [Vertex( 1,  0,  0), Vertex( 1,  0,  0), Vertex( 1,  0,  0)], wood_texture, [Pt(0, 0), Pt(1, 0), Pt(1, 1)]),
+  Triangle([4, 3, 7], GREEN,  [Vertex( 1,  0,  0), Vertex( 1,  0,  0), Vertex( 1,  0,  0)], wood_texture, [Pt(0, 0), Pt(1, 1), Pt(0, 1)]),
+  Triangle([5, 4, 7], BLUE,   [Vertex( 0,  0, -1), Vertex( 0,  0, -1), Vertex( 0,  0, -1)], wood_texture, [Pt(0, 0), Pt(1, 0), Pt(1, 1)]),
+  Triangle([5, 7, 6], BLUE,   [Vertex( 0,  0, -1), Vertex( 0,  0, -1), Vertex( 0,  0, -1)], wood_texture, [Pt(0, 0), Pt(1, 1), Pt(0, 1)]),
+  Triangle([1, 5, 6], YELLOW, [Vertex(-1,  0,  0), Vertex(-1,  0,  0), Vertex(-1,  0,  0)], wood_texture, [Pt(0, 0), Pt(1, 0), Pt(1, 1)]),
+  Triangle([1, 6, 2], YELLOW, [Vertex(-1,  0,  0), Vertex(-1,  0,  0), Vertex(-1,  0,  0)], wood_texture, [Pt(0, 0), Pt(1, 1), Pt(0, 1)]),
+  Triangle([1, 0, 5], PURPLE, [Vertex( 0,  1,  0), Vertex( 0,  1,  0), Vertex( 0,  1,  0)], wood_texture, [Pt(0, 0), Pt(1, 0), Pt(1, 1)]),
+  Triangle([5, 0, 4], PURPLE, [Vertex( 0,  1,  0), Vertex( 0,  1,  0), Vertex( 0,  1,  0)], wood_texture, [Pt(0, 1), Pt(1, 1), Pt(0, 0)]),
+  Triangle([2, 6, 7], CYAN,   [Vertex( 0, -1,  0), Vertex( 0, -1,  0), Vertex( 0, -1,  0)], wood_texture, [Pt(0, 0), Pt(1, 0), Pt(1, 1)]),
+  Triangle([2, 7, 3], CYAN,   [Vertex( 0, -1,  0), Vertex( 0, -1,  0), Vertex( 0, -1,  0)], wood_texture, [Pt(0, 0), Pt(1, 1), Pt(0, 1)]),
 ];
 
 var cube = Model(vertexes, triangles, Vertex(0, 0, 0), Math.sqrt(3));
 // ----------
 
-var sphere = GenerateSphere(15, GREEN);
-
-var instances = [
-  Instance(cube, Vertex(-1.5, 0, 7), Identity4x4, 0.75),
-  Instance(cube, Vertex(1.25, 2.5, 7.5), MakeOYRotationMatrix(195)),
-  Instance(sphere, Vertex(1.75, -0.5, 7), Identity4x4, 1.5),
+var instances = [Instance(cube, Vertex(-1.5, 0, 7), Identity4x4, 0.75),
+                 Instance(cube, Vertex(1.25, 2.5, 7.5), MakeOYRotationMatrix(195)),
+                 Instance(cube, Vertex(1.75, 0, 5), MakeOYRotationMatrix(-30)),
 ];
 
 var camera = Camera(Vertex(-3, 1, 2), MakeOYRotationMatrix(-30));
@@ -840,52 +891,12 @@ lights = [
   Light(LT_POINT, 0.6, Vertex(-3, 2, -10))
 ];
 
-// ----- For the "wrong Gouraud interpolation" image -----
-/*
-var camera = Camera(Vertex(0, 0, 0), Identity4x4);
-
-var light_position = Vertex(2.25, 0, 5);
-//var light_position = Vertex(1, 0, 5);
-//var light_position = Vertex(0, 0, 5);
-
-lights = [
-  Light(LT_AMBIENT, 0.2),
-  Light(LT_POINT, 0.6, light_position)
-];
-
-
-var triangles = [
-  Triangle([4, 0, 3], GREEN,  [Vertex(1, 0, 0), Vertex(1, 0, 0), Vertex(1, 0, 0)]),
-  Triangle([4, 3, 7], GREEN,  [Vertex(1, 0, 0), Vertex(1, 0, 0), Vertex(1, 0, 0)]),
-];
-
-var light_source = GenerateSphere(15, YELLOW);
-
-var face = Model(vertexes, triangles, Vertex(0, 0, 0), Math.sqrt(3));
-
-var instances = [
-  Instance(light_source, light_position, Identity4x4, 0.1),
-  Instance(face, Vertex(-2, 0, 5), MakeOYRotationMatrix(-30), 1),
-];
-*/
-// -----------------------------------------------------
-
-var SetLightingModel = function(model) {
-  LightingModel = model;
+var SetUsePerspectiveCorrectDepth = function(use_perspective_correct_depth) {
+  UsePerspectiveCorrectDepth = use_perspective_correct_depth;
   Render();
 }
 
-var SetShadingModel = function(model) {
-  ShadingModel = model;
-  Render();
-}
-
-var SetUseVertexNormals = function(use_vertex_normals) {
-  UseVertexNormals = use_vertex_normals;
-  Render();
-}
-
-var Render = function() {
+function Render() {
   ClearAll();
   // This lets the browser clear the canvas before blocking to render the scene.
   setTimeout(function(){
@@ -894,7 +905,8 @@ var Render = function() {
   }, 0);
 }
 
-Render();
+// Ugly hack - wait for texture to load.
+setTimeout(function() { Render() }, 50 );
 
 </script>
 <div class="centered">
@@ -905,7 +917,7 @@ Render();
 </div>
 <div class="signup" id="signup">
 </div>
-<script>$("#signup").load("/signup.php?m=gfx&r=raster-11");</script>
+<script>$("#signup").load("/signup.php?m=gfx&r=raster-12");</script>
 </div>
 <div class="copyright">© Gabriel Gambetta 2020</div>
 </body>

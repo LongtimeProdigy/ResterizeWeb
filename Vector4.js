@@ -1,4 +1,4 @@
-import Vector3 from "./Vector3";
+import Vector3 from "./Vector3.js";
 
 export default class Vector4{
     constructor(_x, _y, _z, _w){

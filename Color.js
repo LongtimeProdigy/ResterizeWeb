@@ -6,12 +6,11 @@ export default class Color{
         this.a = _a;
     }
 
-    valueOf(){
-        return {r: this.r, g: this.g, b: this.b, a: this.a};
-    }
-    
     static White(){
         return new Color(255, 255, 255, 255);
+    }
+    static Black(){
+        return new Color(0, 0, 0, 255);
     }
     static Red(){
         return new Color(255, 0, 0, 255);
@@ -31,8 +30,15 @@ export default class Color{
     static Cyan(){
         return new Color(0, 255, 255, 255);
     }
+    static Pink(){
+        return new Color(253, 185, 200, 255);
+    }
     static Random(){
         return new Color(
             Math.floor(Math.random() * 255), Math.floor(Math.random() * 255), Math.floor(Math.random() * 255), 255);
+    }
+
+    static MultiplyScalar(color, num){
+        return new Color(color.r*num, color.g*num, color.b*num, color.a);
     }
 }

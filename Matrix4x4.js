@@ -26,7 +26,7 @@ export default class Matrix4x4{
             mat3x3.a1, mat3x3.a2, mat3x3.a3, 0, 
             mat3x3.b1, mat3x3.b2, mat3x3.b3, 0, 
             mat3x3.c1, mat3x3.c2, mat3x3.c3, 0, 
-            0, 0, 0, 0
+            0, 0, 0, 1
         );
     }
 
@@ -41,19 +41,18 @@ export default class Matrix4x4{
 
     AddScale(num){
         return new Matrix4x4(
-            this.a1, this.a2, this.a3, this.a4, 
-            this.b1, this.b2, this.b3, this.b4, 
-            this.c1, this.c2, this.c3, this.c4, 
-            this.d1, this.d2, this.d3, num 
+            this.a1 * num.x, this.a2, this.a3, this.a4, 
+            this.b1, this.b2 * num.y, this.b3, this.b4, 
+            this.c1, this.c2, this.c3 * num.z, this.c4, 
+            this.d1, this.d2, this.d3, this.d4 
         );
     }
 
     MultiplyVector3(vec3){
-        let mul = vec3.MultiplyScalar(this.d4);
         let temp = new Vector3(
-            (this.a1*mul.x + this.a2*mul.y + this.a3*mul.z + this.a4), 
-            (this.b1*mul.x + this.b2*mul.y + this.b3*mul.z + this.b4), 
-            (this.c1*mul.x + this.c2*mul.y + this.c3*mul.z + this.c4)
+            (this.a1*vec3.x + this.a2*vec3.y + this.a3*vec3.z + this.a4), 
+            (this.b1*vec3.x + this.b2*vec3.y + this.b3*vec3.z + this.b4), 
+            (this.c1*vec3.x + this.c2*vec3.y + this.c3*vec3.z + this.c4)
         );
         // let temp = new Vector3(
         //     (this.a1*vec3.x + this.a2*vec3.y + this.a3*vec3.z + this.a4), 
