@@ -61,11 +61,6 @@ function UnProjectVertex(x, y, z) {
     return new Vector3(p2d.x, p2d.y, z);
 }
 
-var camera = new Camera(
-    new Transform(new Vector3(-2, 1, 4), new Vector3(0, -30, 0), 1), 
-    1, 90);
-const Viewport = camera.GetViewport();
-
 var depthBuffer = new Array();
 depthBuffer.length = WIDTH * HEIGHT;
 for(let i = 0; i < depthBuffer.length; ++i){
@@ -87,20 +82,28 @@ function UpdateDepthBufferIfCloser(x, y, depth) {
     
     return false;
 }
+
+// var camera = new Camera(
+//     new Transform(new Vector3(-2, 1, 4), new Vector3(0, -30, 0), 1), 
+//     1, 90);
+var camera = new Camera(
+    new Transform(new Vector3(0, 0, -5), new Vector3(0, 0, 0), 1), 
+    1, 90);
+const Viewport = camera.GetViewport();
     
 var models = [
-    Model.CreateCube(
-            "cube1", 
-            new Transform(new Vector3(-1.5, 0, 7), new Vector3(0, 0, 0), new Vector3(0.75, 0.75, 0.75)), 
-            new Vector3(0, 0, 0), 
-            Math.sqrt(3)
-        ), 
-    Model.CreateCube(
-            "cube2", 
-            new Transform(new Vector3(1.25, 2.5, 7.5), new Vector3(0, 195 * Math.PI / 180, 0), new Vector3(1, 1, 1)), 
-            new Vector3(0, 0, 0), 
-            Math.sqrt(3)
-        ), 
+    // Model.CreateCube(
+    //         "cube1", 
+    //         new Transform(new Vector3(-1.5, 0, 7), new Vector3(0, 0, 0), new Vector3(0.75, 0.75, 0.75)), 
+    //         new Vector3(0, 0, 0), 
+    //         Math.sqrt(3)
+    //     ), 
+    // Model.CreateCube(
+    //         "cube2", 
+    //         new Transform(new Vector3(1.25, 2.5, 7.5), new Vector3(0, 195 * Math.PI / 180, 0), new Vector3(1, 1, 1)), 
+    //         new Vector3(0, 0, 0), 
+    //         Math.sqrt(3)
+    //     ), 
     // Model.CreateSphere(
     //     15, Color.Green(), 
     //     "Sphere1", 
@@ -109,15 +112,15 @@ var models = [
     //     1
     // ), 
 
+    Model.CreateCube(
+        "cube1", 
+        new Transform(new Vector3(0, 0, 0), new Vector3(0, 60 * Math.PI / 180, 0), new Vector3(1, 1, 1)), 
+        new Vector3(0, 0, 0), 
+        Math.sqrt(3)
+    ), 
     // Model.CreateCube(
     //     "cube2", 
-    //     new Transform(new Vector3(3, 3, 10), new Vector3(0, 0 * Math.PI / 180, 0), new Vector3(1, 1, 1)), 
-    //     new Vector3(0, 0, 0), 
-    //     Math.sqrt(3)
-    // ), 
-    // Model.CreateCube(
-    //     "cube2", 
-    //     new Transform(new Vector3(-3, -3, 10), new Vector3(0, 0 * Math.PI / 180, 0), new Vector3(1, 1, 1)), 
+    //     new Transform(new Vector3(1, 1, 0), new Vector3(0, 0 * Math.PI / 180, 0), new Vector3(1, 1, 1)), 
     //     new Vector3(0, 0, 0), 
     //     Math.sqrt(3)
     // ), 
@@ -131,76 +134,30 @@ var models = [
 ];
 
 var lights = [
-    new AmbientLight(0.2), 
-    new PointLight(0.6, new Vector3(-3, 2, -10), 1), 
-    new DirectionalLight(0.6, new Vector3(0, 1, 0).Normalized()), 
+    // new AmbientLight(0.2), 
+    // new PointLight(0.6, new Vector3(-3, 2, -10), 1), 
+    new DirectionalLight(0.2, new Vector3(0, 1, -1).Normalized()), 
 ]
 
 if(canvas.getContext){
-    wood_texture = new Texture("crate-texture.jpg", () => { console.log("LoadComplete"); UpdateCanvas(); });
+    var wood_texture = new Texture("crate-texture.jpg", () => { console.log("LoadComplete"); });
+
+    UpdateCanvas();
 }
 
-function Delay(time){
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            resolve();
-        }, time * 1000);
-    })
-}
-
-function UpdateCanvas(){
-    // console.log(1111);
-    // await Delay(1);
-    // console.log(2222);
-    console.log(wood_texture)
-
-    // RenderModel();
-    var c_Matrix = camera.GetMatrix();
-    var c_RMatrix = camera.GetRotateMatrix();
-
-    for(let i = 0; i < models.length; ++i){
-        let projected = [];
-        let model = models[i];
-        console.log(model);
-
-        let m_Matrix = model.GetWroldMatrix();
-        let matrix = c_Matrix.Multiply4x4(m_Matrix);
-
-        let m_RMatrix = model.GetWroldRotationMatrix();
-        let rMatrix = c_RMatrix.Multiply4x4(m_RMatrix);
-
-        let center = matrix.MultiplyVector3(model.center);
-        // let model = Clip(camera.clipPlanes, center, model);
-        for(let j = 0; j < model.vertices.length; ++j){
-            projected.push(
-                ProjectVertex(matrix.MultiplyVector3(model.vertices[j]))
-            );
-        }
-
-        let triangles = CullBackFace(model, matrix,);
-        model.triangles = triangles;
-    
-        for(let j = 0; j < model.triangles.length; ++j){
-            let vertices = [
-                (matrix.MultiplyVector3(model.vertices[model.triangles[j].index[0]])), 
-                (matrix.MultiplyVector3(model.vertices[model.triangles[j].index[1]])), 
-                (matrix.MultiplyVector3(model.vertices[model.triangles[j].index[2]]))
-            ];
-            let normals = [
-                (rMatrix.MultiplyVector3(model.triangles[j].normal[0])), 
-                (rMatrix.MultiplyVector3(model.triangles[j].normal[1])), 
-                (rMatrix.MultiplyVector3(model.triangles[j].normal[2]))
-            ]
-            RenderTriangle(model.triangles[j], projected, vertices, normals);
-        }
+async function UpdateCanvas(){
+    function Delay(time){
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                resolve();
+            }, time * 1000);
+        })
     }
+    await Delay(1);
+
+    RenderModel();
 
     ctx.putImageData(id, 0, 0);
-}
-
-var wood_texture
-async function LoadTexturre(){
-    
 }
 
 function RenderModel(){
@@ -216,15 +173,14 @@ function RenderModel(){
             continue;
         }
 
-        // let triangles = CullBackFace(model, c_Matrix, m_Matrix);
-        // model.triangles = triangles;
+        let triangles = CullBackFace(model, matrix);
+        model.triangles = triangles;
         
         for(let j = 0; j < model.vertices.length; ++j){
             projected.push(
                 ProjectVertex(c_Matrix.MultiplyVector3(m_Matrix.MultiplyVector3(model.vertices[j])))
             );
         }
-        console.log(model.triangles);
         for(let j = 0; j < model.triangles.length; ++j){
             let vertices = [
                 (c_Matrix.MultiplyVector3(m_Matrix.MultiplyVector3(model.vertices[model.triangles[j].index[0]]))), 
@@ -368,12 +324,16 @@ function DrawFillTriangle(P0, P1, P2, color, vertices, normals, uvs){
 
     // for uv
     let u02, u012, v02, v012;
-    [u02, u012] = InterpolateTriangle(P0.y, uvs[index[0]].x / vertices[index[0]].z,
-            P1.y, uvs[index[1]].x / vertices[index[1]].z,
-            P2.y, uvs[index[2]].x / vertices[index[2]].z);
-    [v02, v012] = InterpolateTriangle(P0.y, uvs[index[0]].y / vertices[index[0]].z,
-            P1.y, uvs[index[1]].y / vertices[index[1]].z,
-            P2.y, uvs[index[2]].y / vertices[index[2]].z);
+    [u02, u012] = InterpolateTriangle(
+                P0.y, uvs[index[0]].x / vertices[index[0]].z,
+                P1.y, uvs[index[1]].x / vertices[index[1]].z,
+                P2.y, uvs[index[2]].x / vertices[index[2]].z
+            );
+    [v02, v012] = InterpolateTriangle(
+                P0.y, uvs[index[0]].y / vertices[index[0]].z,
+                P1.y, uvs[index[1]].y / vertices[index[1]].z,
+                P2.y, uvs[index[2]].y / vertices[index[2]].z
+            );
 
     // for lighting
     let cMatrix = camera.GetMatrix(); 
@@ -477,10 +437,10 @@ function DrawFillTriangle(P0, P1, P2, color, vertices, normals, uvs){
         }
 
         let uscan, vscan;
-        uscan = Interpolate(x_l, u_left[y - P0.y], x_r, u_right[y - P0.y]);
-        vscan = Interpolate(x_l, v_left[y - P0.y], x_r, v_right[y - P0.y]);
+        uscan = InterpolateFloat(x_l, u_left[y - P0.y], x_r, u_right[y - P0.y]);
+        vscan = InterpolateFloat(x_l, v_left[y - P0.y], x_r, v_right[y - P0.y]);
 
-        for(let x = x_l; x < x_r; ++x){
+        for(let x = x_l; x <= x_r; ++x){
             // let mul = h_segment[x - x_l];
             let depth = z_segment[x - x_l];
             // let shaded_color = new Color(
@@ -499,16 +459,27 @@ function DrawFillTriangle(P0, P1, P2, color, vertices, normals, uvs){
                 intensity = ComputeLighting(vertex, normal);
             }
 
-            // let u = uscan[x - x_l];
-            // let v = vscan[x - x_l];
-            // color = wood_texture.GetTexel(u, v);
+            let u = (uscan[x - x_l] * depth);
+            let v = (vscan[x - x_l] * depth);
+            let color2 = wood_texture.GetTexel(u, v, x, y);
+            // if(y <= P0.y){
+            if(color2.r == undefined){
+                let iu = (u * 3264) | 0;
+                let iv = (v * 4896) | 0;
+                let offset = (iv * 3264 * 4 + iu * 4);
+                console.log(x, y, u, v, iu, iv, offset, color2)
+            }
 
             if(UpdateDepthBufferIfCloser(x, y, depth)){
-                PutPixel(x, y, Color.MultiplyScalar(color, intensity));
+                PutPixel(x, y, color2);
                 depthBuffer[x + y * WIDTH] = depth;
             }
         }
     }
+}
+
+function Clamp0To1(num){
+    return Math.max(Math.min(num, 1), 0);
 }
 //#endregion
 
@@ -585,10 +556,12 @@ function InterpolateFloat(i0, d0, i1, d1){
     const a = (d1 - d0) / (i1 - i0);
     let d = d0;
 
-    for(let i = i0; i <= i1; ++i){
+    for(let i = i0; i < i1; ++i){
         values.push(d);
         d += a;
     }
+
+    values.push(d1);
 
     return values;
 }
