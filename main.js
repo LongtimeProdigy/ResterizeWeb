@@ -17,6 +17,7 @@ const GOURAUD_LIGHTING = 2;
 const PHONG_LIGHTING = 3;
 var LightingMode = PHONG_LIGHTING;
 
+//#region Canvas
 var canvas = document.getElementById("RayTrace");
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
@@ -69,11 +70,11 @@ for(let i = 0; i < depthBuffer.length; ++i){
 function UpdateDepthBufferIfCloser(x, y, depth) {
     x = canvas.width/2 + (x | 0);
     y = canvas.height/2 - (y | 0) - 1;
-  
+    
     if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT){
         return false;
     }
-  
+    
     let offset = x + canvas.width*y;
     if (depthBuffer[offset] == undefined || depth < depthBuffer[offset]) {
         depthBuffer[offset] = depth;
@@ -82,12 +83,13 @@ function UpdateDepthBufferIfCloser(x, y, depth) {
     
     return false;
 }
+//#endregion
 
 // var camera = new Camera(
 //     new Transform(new Vector3(-2, 1, 4), new Vector3(0, -30, 0), 1), 
 //     1, 90);
 var camera = new Camera(
-    new Transform(new Vector3(0, 0, -5), new Vector3(0, 0, 0), 1), 
+    new Transform(new Vector3(0, 0, -3), new Vector3(0, 0, 0), 1), 
     1, 90);
 const Viewport = camera.GetViewport();
     
@@ -114,7 +116,7 @@ var models = [
 
     Model.CreateCube(
         "cube1", 
-        new Transform(new Vector3(0, 0, 0), new Vector3(0, 60 * Math.PI / 180, 0), new Vector3(1, 1, 1)), 
+        new Transform(new Vector3(0, 0, 0), new Vector3(0, 0 * Math.PI / 180, 0), new Vector3(1, 1, 1)), 
         new Vector3(0, 0, 0), 
         Math.sqrt(3)
     ), 
@@ -135,8 +137,8 @@ var models = [
 
 var lights = [
     // new AmbientLight(0.2), 
-    // new PointLight(0.6, new Vector3(-3, 2, -10), 1), 
-    new DirectionalLight(0.2, new Vector3(0, 1, -1).Normalized()), 
+    new PointLight(0.6, new Vector3(0, 0, 5), 1), 
+    // new DirectionalLight(0.2, new Vector3(0, 1, -1).Normalized()), 
 ]
 
 if(canvas.getContext){
@@ -156,6 +158,10 @@ async function UpdateCanvas(){
     await Delay(1);
 
     RenderModel();
+
+    // for(let i = 0; i < WIDTH; ++i){
+    //     PutPixel(i, 23, Color.Pink());
+    // }
 
     ctx.putImageData(id, 0, 0);
 }
@@ -182,17 +188,19 @@ function RenderModel(){
             );
         }
         for(let j = 0; j < model.triangles.length; ++j){
-            let vertices = [
-                (c_Matrix.MultiplyVector3(m_Matrix.MultiplyVector3(model.vertices[model.triangles[j].index[0]]))), 
-                (c_Matrix.MultiplyVector3(m_Matrix.MultiplyVector3(model.vertices[model.triangles[j].index[1]]))), 
-                (c_Matrix.MultiplyVector3(m_Matrix.MultiplyVector3(model.vertices[model.triangles[j].index[2]])))
-            ];
-            let normals = [
-                (c_Matrix.MultiplyVector3(m_Matrix.MultiplyVector3(model.triangles[j].normal[0]))), 
-                (c_Matrix.MultiplyVector3(m_Matrix.MultiplyVector3(model.triangles[j].normal[1]))), 
-                (c_Matrix.MultiplyVector3(m_Matrix.MultiplyVector3(model.triangles[j].normal[2])))
-            ]
-            RenderTriangle(model.triangles[j], projected, vertices, normals);
+            // if(j == 1){
+                let vertices = [
+                    matrix.MultiplyVector3(model.vertices[model.triangles[j].index[0]]), 
+                    matrix.MultiplyVector3(model.vertices[model.triangles[j].index[1]]), 
+                    matrix.MultiplyVector3(model.vertices[model.triangles[j].index[2]])
+                ];
+                let normals = [
+                    matrix.MultiplyVector3(model.triangles[j].normal[0]), 
+                    matrix.MultiplyVector3(model.triangles[j].normal[1]), 
+                    matrix.MultiplyVector3(model.triangles[j].normal[2])
+                ]
+                RenderTriangle(model.triangles[j], projected, vertices, normals);
+            // }
         }
     }
 }
@@ -334,9 +342,15 @@ function DrawFillTriangle(P0, P1, P2, color, vertices, normals, uvs){
                 P1.y, uvs[index[1]].y / vertices[index[1]].z,
                 P2.y, uvs[index[2]].y / vertices[index[2]].z
             );
+    
+    let iz02, iz012;
+    [iz02, iz012] = InterpolateTriangle(
+        P0.y, 1 / vertices[index[0]].z, 
+        P1.y, 1 / vertices[index[1]].z, 
+        P2.y, 1 / vertices[index[2]].z
+    );
 
     // for lighting
-    let cMatrix = camera.GetMatrix(); 
     let normal0 = (normals[index[0]]);
     let normal1 = (normals[index[1]]);
     let normal2 = (normals[index[2]]);
@@ -385,6 +399,7 @@ function DrawFillTriangle(P0, P1, P2, color, vertices, normals, uvs){
     let i_left, i_right;
     let nx_left, nx_right, ny_left, ny_right, nz_left, nz_right;
     let u_left, u_right, v_left, v_right;
+    let iz_left, iz_right;
     if(x02[m] < x012[m]){
         [x_left, x_right] = [x02, x012];
         // [h_left, h_right] = [h02, h012];
@@ -397,6 +412,8 @@ function DrawFillTriangle(P0, P1, P2, color, vertices, normals, uvs){
 
         [u_left, u_right] = [u02, u012];
         [v_left, v_right] = [v02, v012];
+
+        [iz_left, iz_right] = [iz02, iz012];
     }
     else{
         [x_left, x_right] = [x012, x02];
@@ -410,6 +427,8 @@ function DrawFillTriangle(P0, P1, P2, color, vertices, normals, uvs){
 
         [u_left, u_right] = [u012, u02];
         [v_left, v_right] = [v012, v02];
+
+        [iz_left, iz_right] = [iz012, iz02];
     }
 
     for(let y = P0.y; y < P2.y; ++y){
@@ -418,6 +437,7 @@ function DrawFillTriangle(P0, P1, P2, color, vertices, normals, uvs){
         
         // let h_segment = InterpolateFloat(x_l, h_left[y - P0.y], x_r, h_right[y - P0.y]);
         let z_segment = InterpolateFloat(x_l, z_left[y - P0.y], x_r, z_right[y - P0.y]);
+        let iz_segment = InterpolateFloat(x_l, iz_left[y - P0.y], x_r, iz_right[y - P0.y]);
 
         let il, ir, iscan;
         let nxl, nxr, nyl, nyr, nzl, nzr;
@@ -440,7 +460,7 @@ function DrawFillTriangle(P0, P1, P2, color, vertices, normals, uvs){
         uscan = InterpolateFloat(x_l, u_left[y - P0.y], x_r, u_right[y - P0.y]);
         vscan = InterpolateFloat(x_l, v_left[y - P0.y], x_r, v_right[y - P0.y]);
 
-        for(let x = x_l; x <= x_r; ++x){
+        for(let x = x_l; x < x_r; ++x){
             // let mul = h_segment[x - x_l];
             let depth = z_segment[x - x_l];
             // let shaded_color = new Color(
@@ -459,19 +479,13 @@ function DrawFillTriangle(P0, P1, P2, color, vertices, normals, uvs){
                 intensity = ComputeLighting(vertex, normal);
             }
 
-            let u = (uscan[x - x_l] * depth);
-            let v = (vscan[x - x_l] * depth);
-            let color2 = wood_texture.GetTexel(u, v, x, y);
-            // if(y <= P0.y){
-            if(color2.r == undefined){
-                let iu = (u * 3264) | 0;
-                let iv = (v * 4896) | 0;
-                let offset = (iv * 3264 * 4 + iu * 4);
-                console.log(x, y, u, v, iu, iv, offset, color2)
-            }
+            let u = (uscan[x - x_l] / iz_segment[x - x_l]);
+            let v = (vscan[x - x_l] / iz_segment[x - x_l]);
+            let color2 = wood_texture.GetTexel(u, v);
+            // let color2 = wood_texture.GetBillinearTexel(u, v);
 
             if(UpdateDepthBufferIfCloser(x, y, depth)){
-                PutPixel(x, y, color2);
+                PutPixel(x, y, Color.MultiplyScalar(color2, intensity));
                 depthBuffer[x + y * WIDTH] = depth;
             }
         }

@@ -41,4 +41,13 @@ export default class Color{
     static MultiplyScalar(color, num){
         return new Color(color.r*num, color.g*num, color.b*num, color.a);
     }
+
+    static Interpolate(col1, col2, inter){
+        return new Color(
+            col1.r * inter + (1 - inter) * col2.r, 
+            col1.g * inter + (1 - inter) * col2.g, 
+            col1.b * inter + (1 - inter) * col2.b, 
+            255
+        );
+    }
 }
