@@ -10,6 +10,8 @@ import PointLight from "./PointLight.js";
 import DirectionalLight from "./DirectionalLight.js";
 import Rect from "./Rect.js";
 import Texture from "./Texture.js"
+import Matrix3x3 from "./Matrix3x3.js";
+import Matrix4x4 from "./Matrix4x4.js";
 
 // 1 == Flat, 2 == Gouraud, 3 == Phong
 const FLAT_LIGHTING = 1;
@@ -136,32 +138,99 @@ var models = [
 ];
 
 var lights = [
-    // new AmbientLight(0.2), 
+    new AmbientLight(0.2), 
     new PointLight(0.6, new Vector3(0, 0, 5), 1), 
-    // new DirectionalLight(0.2, new Vector3(0, 1, -1).Normalized()), 
+    new DirectionalLight(0.2, new Vector3(0, 1, -1).Normalized()), 
 ]
 
+var wood_texture;
+
 if(canvas.getContext){
-    var wood_texture = new Texture("crate-texture.jpg", () => { console.log("LoadComplete"); });
+    Start();
+}
+
+async function Start(){
+    await LoadAssets();
+
+    AssignMouseEvent();
 
     UpdateCanvas();
 }
 
+function RotateXMatrix(degree){
+    return new Matrix3x3(
+        1, 0, 0, 
+        0, Math.cos(degree), -Math.sin(degree), 
+        0, Math.sin(degree), Math.cos(degree)
+    )
+}
+function RotateYMatrix(degree){
+    return new Matrix3x3(
+        Math.cos(degree), 0, -Math.sin(degree), 
+        0, 1, 0, 
+        Math.sin(degree), 0, Math.cos(degree)
+    )
+}
+
+function lookAt(from, to, tmp = new Vector3(0, 1, 0)) 
+{ 
+    let forward = Vector3.Minus(from, to).Normalized();
+    // normalize(from - to); 
+    let right = Vector3.Cross(tmp, forward);
+    // crossProduct(normalize(tmp), forward); 
+    let up = Vector3.Cross(forward, right);
+    // crossProduct(forward, right); 
+ 
+    let camToWorld = new Matrix4x4(
+        right.x, right.y, right.z, 
+        up.x, up.y, up.z, 
+        forward.x, forward.y, forward.z, 
+        from.x, from.y, from.z
+    ); 
+ 
+    return camToWorld; 
+} 
+
+var mousedown = false;
+function AssignMouseEvent(){
+    canvas.addEventListener("mousedown", e =>{
+        mousedown = true;
+    });
+
+    canvas.addEventListener("mousemove", e =>{
+        if(mousedown){
+            let disVector = camera.transform.position;
+            let disX = RotateYMatrix(e.movementX * Math.PI / 180).MultiplyVector3(disVector);
+
+            let rotateMat = lookAt(disVector, new Vector3(0, 0, 0));
+
+            camera.transform.position = disX;
+            camera.transform.rotation = rotateMat.MultiplyVector3(camera.transform.rotation);
+
+            UpdateCanvas();
+        }
+    });
+
+    canvas.addEventListener("mouseup", e =>{
+        mousedown =false;
+    });
+}
+
+async function LoadAssets(){
+    wood_texture = new Texture();
+    await wood_texture.LoadTexture("crate-texture.jpg");
+}
+
 async function UpdateCanvas(){
-    function Delay(time){
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                resolve();
-            }, time * 1000);
-        })
-    }
-    await Delay(1);
+    // 픽셀 정리
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    // 컨텍스트 리셋
+    ctx.beginPath();
+
+    id = ctx.getImageData(0, 0, WIDTH, HEIGHT);
+    pixels = id.data;
 
     RenderModel();
-
-    // for(let i = 0; i < WIDTH; ++i){
-    //     PutPixel(i, 23, Color.Pink());
-    // }
 
     ctx.putImageData(id, 0, 0);
 }
@@ -184,32 +253,28 @@ function RenderModel(){
         
         for(let j = 0; j < model.vertices.length; ++j){
             projected.push(
-                ProjectVertex(c_Matrix.MultiplyVector3(m_Matrix.MultiplyVector3(model.vertices[j])))
+                ProjectVertex(matrix.MultiplyVector3(model.vertices[j]))
             );
         }
         for(let j = 0; j < model.triangles.length; ++j){
-            // if(j == 1){
-                let vertices = [
-                    matrix.MultiplyVector3(model.vertices[model.triangles[j].index[0]]), 
-                    matrix.MultiplyVector3(model.vertices[model.triangles[j].index[1]]), 
-                    matrix.MultiplyVector3(model.vertices[model.triangles[j].index[2]])
-                ];
-                let normals = [
-                    matrix.MultiplyVector3(model.triangles[j].normal[0]), 
-                    matrix.MultiplyVector3(model.triangles[j].normal[1]), 
-                    matrix.MultiplyVector3(model.triangles[j].normal[2])
-                ]
-                RenderTriangle(model.triangles[j], projected, vertices, normals);
-            // }
+            let vertices = [
+                matrix.MultiplyVector3(model.vertices[model.triangles[j].index[0]]), 
+                matrix.MultiplyVector3(model.vertices[model.triangles[j].index[1]]), 
+                matrix.MultiplyVector3(model.vertices[model.triangles[j].index[2]])
+            ];
+            let normals = [
+                matrix.MultiplyVector3(model.triangles[j].normal[0]), 
+                matrix.MultiplyVector3(model.triangles[j].normal[1]), 
+                matrix.MultiplyVector3(model.triangles[j].normal[2])
+            ]
+            RenderTriangle(model.triangles[j], projected, vertices, normals);
         }
     }
 }
 
 function RenderTriangle(triangle, projected, vertices, normals){
     DrawFillTriangle(
-        projected[triangle.index[0]], 
-        projected[triangle.index[1]], 
-        projected[triangle.index[2]], 
+        [projected[triangle.index[0]], projected[triangle.index[1]], projected[triangle.index[2]]], 
         triangle.color, vertices, normals, triangle.uv
     );
 
@@ -312,23 +377,23 @@ function DrawWireframeTriangle(P0, P1, P2, color){
     DrawLine(P2, P0, color);
 }
 
-function DrawFillTriangle(P0, P1, P2, color, vertices, normals, uvs){
+function DrawFillTriangle(pvertices, color, vertices, normals, uvs){
     let index = [0, 1, 2];
-    if(P1.y < P0.y) { let temp=P0; P0=P1; P1=temp; let temp2 = index[0]; index[0] = index[1]; index[1] = temp2; }
-    if(P2.y < P0.y) { let temp=P0; P0=P2; P2=temp; let temp2 = index[0]; index[0] = index[2]; index[2] = temp2; }
-    if(P2.y < P1.y) { let temp=P1; P1=P2; P2=temp; let temp2 = index[1]; index[1] = index[2]; index[2] = temp2; }
+    if(pvertices[index[1]].y < pvertices[index[1]].y) { let temp2 = index[0]; index[0] = index[1]; index[1] = temp2; }
+    if(pvertices[index[2]].y < pvertices[index[0]].y) { let temp2 = index[0]; index[0] = index[2]; index[2] = temp2; }
+    if(pvertices[index[2]].y < pvertices[index[1]].y) { let temp2 = index[1]; index[1] = index[2]; index[2] = temp2; }
 
-    let x01 = BasicInterfolate(P0.y, P0.x, P1.y, P1.x);  // 0 to 1
-    let x12 = BasicInterfolate(P1.y, P1.x, P2.y, P2.x);  // 1 to 2
-    let x02 = BasicInterfolate(P0.y, P0.x, P2.y, P2.x);  // 0 to 2
+    let x01 = BasicInterfolate(pvertices[index[0]].y, pvertices[index[0]].x, pvertices[index[1]].y, pvertices[index[1]].x);  // 0 to 1
+    let x12 = BasicInterfolate(pvertices[index[1]].y, pvertices[index[1]].x, pvertices[index[2]].y, pvertices[index[2]].x);  // 1 to 2
+    let x02 = BasicInterfolate(pvertices[index[0]].y, pvertices[index[0]].x, pvertices[index[2]].y, pvertices[index[2]].x);  // 0 to 2
 
     // let h01 = InterpolateFloat(P0.y, P0.x, P1.y, P1.x);
     // let h12 = InterpolateFloat(P1.y, P1.x, P2.y, P2.x);
     // let h02 = InterpolateFloat(P0.y, P0.x, P2.y, P2.x);
 
-    let z01 = InterpolateFloat(P0.y, P0.z, P1.y, P1.z);  // 0 to 1
-    let z12 = InterpolateFloat(P1.y, P1.z, P2.y, P2.z);  // 1 to 2
-    let z02 = InterpolateFloat(P0.y, P0.z, P2.y, P2.z);  // 0 to 2
+    let z01 = InterpolateFloat(pvertices[index[0]].y, pvertices[index[0]].z, pvertices[index[1]].y, pvertices[index[1]].z);  // 0 to 1
+    let z12 = InterpolateFloat(pvertices[index[1]].y, pvertices[index[1]].z, pvertices[index[2]].y, pvertices[index[2]].z);  // 1 to 2
+    let z02 = InterpolateFloat(pvertices[index[0]].y, pvertices[index[0]].z, pvertices[index[2]].y, pvertices[index[2]].z);  // 0 to 2
 
     // for uv
     let u02, u012, v02, v012;

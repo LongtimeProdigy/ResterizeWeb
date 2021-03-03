@@ -1,30 +1,34 @@
 import Color from "./Color.js";
 
 export default class Texture{
-    constructor(url, callback){
-        if (!(this instanceof Texture)) { return new Texture(url); }
+    constructor(){
+        if (!(this instanceof Texture)) { return new Texture(); }
 
         this.image = new Image();
-        this.image.src = url;
-        
-        this.image.onload = () => {
-            this.iw = this.image.width - 1;
-            this.ih = this.image.height - 1;
-        
-            this.canvas = document.createElement("canvas");
-            this.canvas.width = this.image.width;
-            this.canvas.height = this.image.height;
-            var c2d = this.canvas.getContext("2d");
-            c2d.drawImage(this.image, 0, 0, this.image.width, this.image.height);
-            this.pixel_data = c2d.getImageData(0, 0, this.image.width, this.image.height);
-
-            console.log(this);
-        }
 
         this.image.onerror = (err) => {
             console.log("Texture Load Error", err);
-            reject();
         }
+    }
+
+    LoadTexture(url){
+        return new Promise((resolve, reject) => {
+            this.image.src = url;
+
+            this.image.onload = () => {
+                this.iw = this.image.width - 1;
+                this.ih = this.image.height - 1;
+            
+                this.canvas = document.createElement("canvas");
+                this.canvas.width = this.image.width;
+                this.canvas.height = this.image.height;
+                var c2d = this.canvas.getContext("2d");
+                c2d.drawImage(this.image, 0, 0, this.image.width, this.image.height);
+                this.pixel_data = c2d.getImageData(0, 0, this.image.width, this.image.height);
+    
+                resolve();
+            }
+        });
     }
 
     GetTexel(u, v){
@@ -33,14 +37,14 @@ export default class Texture{
 
         let offset = (iv * this.image.width * 4 + iu * 4);
 
-        let color2 = new Color(
+        let color = new Color(
             this.pixel_data.data[offset + 0], 
             this.pixel_data.data[offset + 1], 
             this.pixel_data.data[offset + 2], 
             255
         );
 
-        return color2;
+        return color;
     }
 
     GetBillinearTexel(u, v){
