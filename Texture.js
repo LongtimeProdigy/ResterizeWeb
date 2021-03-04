@@ -26,7 +26,7 @@ export default class Texture{
                 c2d.drawImage(this.image, 0, 0, this.image.width, this.image.height);
                 this.pixel_data = c2d.getImageData(0, 0, this.image.width, this.image.height);
     
-                resolve();
+                resolve(this);
             }
         });
     }
