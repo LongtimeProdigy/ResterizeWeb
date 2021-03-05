@@ -70,16 +70,9 @@ export default class Canvas{
     }
     CanvasToViewport(x, y){
         return new Vector3(
-            (x / WIDTH), 
-            (y / HEIGHT), 
+            (x / this.WIDTH), 
+            (y / this.HEIGHT), 
             0
         );
-    }
-
-    UnProjectVertex(x, y, z) {
-        let ux = x*z / camera.d;
-        let uy = y*z / camera.d;
-        let p2d = CanvasToViewport(ux, uy);
-        return new Vector3(p2d.x, p2d.y, z);
     }
 }

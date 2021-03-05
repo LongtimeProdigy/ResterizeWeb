@@ -18,8 +18,7 @@ export default class Renderer{
         let matrix = cameraMatrix.Multiply4x4(modelMatrix);
         let center = matrix.MultiplyVector3(target.center);
 
-        let model = target;
-        // camera.PlaneClip(center, target);
+        let model = camera.PlaneClip(center, target);
         if(model == null){
             return;
         }
@@ -37,7 +36,7 @@ export default class Renderer{
                 )
             );
         }
-
+                    
         for(let j = 0; j < model.triangles.length; ++j){
             this.DrawFillTriangle(model.triangles[j], model.vertices, projected, canvas, camera, lights, matrix, model.texture);
         }
@@ -56,6 +55,7 @@ export default class Renderer{
             let dot = Vector3.Dot(nor, dtc);
             if(dot > 0){
                 // front
+                console.log(model.name, "cull");
             }
             else{
                 // back
@@ -64,20 +64,6 @@ export default class Renderer{
         }
     
         return triangles;
-    }
-
-    RenderTriangle(triangle, projected, vertices, normals){
-        this.DrawFillTriangle(
-            [projected[triangle.index[0]], projected[triangle.index[1]], projected[triangle.index[2]]], 
-            triangle.color, vertices, normals, triangle.uv
-        );
-    
-        // DrawWireframeTriangle(
-        //     projected[triangle.index[0]], 
-        //     projected[triangle.index[1]], 
-        //     projected[triangle.index[2]], 
-        //     Color.Black()
-        // );
     }
 
     DrawLine(P0, P1, color) {
@@ -118,9 +104,9 @@ export default class Renderer{
     }
     
     DrawWireframeTriangle(P0, P1, P2, color){
-        DrawLine(P0, P1, color);
-        DrawLine(P1, P2, color);
-        DrawLine(P2, P0, color);
+        this.DrawLine(P0, P1, color);
+        this.DrawLine(P1, P2, color);
+        this.DrawLine(P2, P0, color);
     }
     
     DrawFillTriangle(triangle, vertices, projected, canvas, camera, lights, matrix, texture){
@@ -220,14 +206,19 @@ export default class Renderer{
         let color2 = Color.Random();
         // console.log(vertices[triangle.index[0]], vertices[triangle.index[1]], vertices[triangle.index[2]], color2)
         // console.log(
-        //     modelMatrix.MultiplyVector3(vertices[triangle.index[0]].position).z, 
-        //     modelMatrix.MultiplyVector3(vertices[triangle.index[1]].position).z, 
-        //     modelMatrix.MultiplyVector3(vertices[triangle.index[2]].position).z
+        //     matrix.MultiplyVector3(vertices[triangle.index[0]].position).z, 
+        //     matrix.MultiplyVector3(vertices[triangle.index[1]].position).z, 
+        //     matrix.MultiplyVector3(vertices[triangle.index[2]].position).z
         // )
         // console.log(
         //     vertices[triangle.index[0]].uv, 
         //     vertices[triangle.index[1]].uv, 
         //     vertices[triangle.index[2]].uv
+        // )
+        // console.log(
+        //     projected[triangle.index[0]], 
+        //     projected[triangle.index[1]], 
+        //     projected[triangle.index[2]]
         // )
         // console.log(u02, u012, v02, v012, z02, z012);
         
@@ -256,9 +247,9 @@ export default class Renderer{
                 intensity = this.ComputeLighting(lights, center, vertices[triangle.index[0]].normal, camera);
             break;
             case Renderer.GOURAUD_LIGHTING:
-                let i0 = this.ComputeLighting(lights, vertices.position[triangle.index[0]], triangle.normal[triangle.index[0]], camera);
-                let i1 = this.ComputeLighting(lights, vertices.position[triangle.index[1]], triangle.normal[triangle.index[1]], camera);
-                let i2 = this.ComputeLighting(lights, vertices.position[triangle.index[2]], triangle.normal[triangle.index[2]], camera);
+                let i0 = this.ComputeLighting(lights, vertices[triangle.index[0]].position, vertices[triangle.index[0]].normal, camera);
+                let i1 = this.ComputeLighting(lights, vertices[triangle.index[1]].position, vertices[triangle.index[1]].normal, camera);
+                let i2 = this.ComputeLighting(lights, vertices[triangle.index[2]].position, vertices[triangle.index[2]].normal, camera);
                 [i02, i012] = this.InterpolateFloatTriangle(
                     projected[triangle.index[0]].y, i0, 
                     projected[triangle.index[1]].y, i1, 
@@ -267,19 +258,19 @@ export default class Renderer{
             break;
             case Renderer.PHONG_LIGHTING:
                 [nx02, nx012] = this.InterpolateFloatTriangle(
-                    projected[triangle.index[0]].y, triangle.normal[triangle.index[0]].x, 
-                    projected[triangle.index[1]].y, triangle.normal[triangle.index[1]].x, 
-                    projected[triangle.index[2]].y, triangle.normal[triangle.index[2]].x
+                    projected[triangle.index[0]].y, vertices[triangle.index[0]].normal.x, 
+                    projected[triangle.index[1]].y, vertices[triangle.index[1]].normal.x, 
+                    projected[triangle.index[2]].y, vertices[triangle.index[2]].normal.x
                     );
                 [ny02, ny012] = this.InterpolateFloatTriangle(
-                    projected[triangle.index[0]].y, triangle.normal[triangle.index[0]].y, 
-                    projected[triangle.index[1]].y, triangle.normal[triangle.index[1]].y, 
-                    projected[triangle.index[2]].y, triangle.normal[triangle.index[2]].y
+                    projected[triangle.index[0]].y, vertices[triangle.index[0]].normal.y, 
+                    projected[triangle.index[1]].y, vertices[triangle.index[1]].normal.y, 
+                    projected[triangle.index[2]].y, vertices[triangle.index[2]].normal.y
                     );
                 [nz02, nz012] = this.InterpolateFloatTriangle(
-                    projected[triangle.index[0]].y, triangle.normal[triangle.index[0]].z, 
-                    projected[triangle.index[1]].y, triangle.normal[triangle.index[1]].z, 
-                    projected[triangle.index[2]].y, triangle.normal[triangle.index[2]].z
+                    projected[triangle.index[0]].y, vertices[triangle.index[0]].normal.z, 
+                    projected[triangle.index[1]].y, vertices[triangle.index[1]].normal.z, 
+                    projected[triangle.index[2]].y, vertices[triangle.index[2]].normal.z
                     );
             break;
         }
@@ -374,7 +365,7 @@ export default class Renderer{
                     intensity = iscan[x - x_l];
                 }
                 else if(this.LightingMode == Renderer.PHONG_LIGHTING){
-                    let vertex = UnProjectVertex(x, y, depth);
+                    let vertex = this.UnProjectVertex(x, y, depth, camera, canvas);
                     let normal = new Vector3(nxscan[x - x_l], nyscan[x - x_l], nzscan[x - x_l]);
                     intensity = this.ComputeLighting(lights, vertex, normal, camera);
                 }
@@ -389,16 +380,25 @@ export default class Renderer{
                     v = vscan[x - x_l];
                 }
                 // console.log(x, y, u, v);
-                let color = texture.GetTexel(u, v);
-                // let color = wood_texture.GetBillinearTexel(u, v);
-                // console.log(x, y, u, v, color);
-                // if(color.x == undefined){
-                //     console.log(x, y, u, v, color)
-                // }
-                // else
-                    canvas.PutPixel(x, y, depth, color);
+
+                if(texture == undefined){
+                    canvas.PutPixel(x, y, depth, Color.MultiplyScalar(vertices[triangle.index[0]].color, intensity));
+                }
+                else{
+                    let color = texture.GetTexel(u, v);
+                    // let color = wood_texture.GetBillinearTexel(u, v);
+                    canvas.PutPixel(x, y, depth, Color.MultiplyScalar(color, intensity));
+                }
             }
         }
+    }
+
+    UnProjectVertex(x, y, z, camera, canvas) {
+        let oz = 1 / z;
+        let ux = x * oz / camera.d;
+        let uy = y * oz / camera.d;
+        let p2d = canvas.CanvasToViewport(ux, uy);
+        return new Vector3(p2d.x, p2d.y, oz);
     }
 
     BasicInterfolate(i0, d0, i1, d1){

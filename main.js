@@ -15,12 +15,12 @@ import Matrix4x4 from "./Matrix4x4.js";
 import Canvas from "./Canavs.js";
 import Renderer from "./Renderer.js";
 
-const renderer = new Renderer(Renderer.FLAT_LIGHTING);
+const renderer = new Renderer(Renderer.PHONG_LIGHTING);
 
 const canvas = new Canvas("RayTrace", "blue");
 
 // var camera = new Camera(
-//     new Transform(new Vector3(-2, 1, 4), new Vector3(0, -30, 0), 1), 
+//     new Transform(new Vector3(-2, 1, 4), new Vector3(0, 30, 0), 1), 
 //     1, 90);
 const camera = new Camera(
     new Transform(new Vector3(0, 0, -5), new Vector3(0, 0, 0), 1), 
@@ -28,9 +28,9 @@ const camera = new Camera(
 
 var models;
 const lights = [
-    new AmbientLight(0.2), 
-    new PointLight(0.6, new Vector3(0, 0, 5), 1), 
-    new DirectionalLight(0.2, new Vector3(0, 1, -1).Normalized()), 
+    // new AmbientLight(0.2), 
+    // new PointLight(0.6, new Vector3(0, 0, 5), 1), 
+    new DirectionalLight(0.8, new Vector3(-1, 0, 1).Normalized()), 
 ]
 
 if(canvas){
@@ -45,34 +45,38 @@ async function Start(){
         //         "cube1", 
         //         new Transform(new Vector3(-1.5, 0, 7), new Vector3(0, 0, 0), new Vector3(0.75, 0.75, 0.75)), 
         //         new Vector3(0, 0, 0), 
-        //         Math.sqrt(3)
+        //         Math.sqrt(3), 
+        //         wood_texture
         //     ), 
         // Model.CreateCube(
         //         "cube2", 
-        //         new Transform(new Vector3(1.25, 2.5, 7.5), new Vector3(0, 195 * Math.PI / 180, 0), new Vector3(1, 1, 1)), 
+        //         new Transform(new Vector3(1.25, 2.5, 7.5), new Vector3(0, 195, 0), new Vector3(1, 1, 1)), 
         //         new Vector3(0, 0, 0), 
-        //         Math.sqrt(3)
+        //         Math.sqrt(3), 
+        //         undefined
         //     ), 
         // Model.CreateSphere(
         //     15, Color.Green(), 
         //     "Sphere1", 
         //     new Transform(new Vector3(1.75, -0.5, 7), new Vector3(0, 0, 0), new Vector3(1.5, 1.5, 1.5)), 
         //     new Vector3(0, 0, 0), 
-        //     1
+        //     1, 
+        //     undefined
         // ), 
 
         Model.CreateCube(
             "cube1", 
-            new Transform(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(1, 1, 1)), 
+            new Transform(new Vector3(-2, -1, 0), new Vector3(0, 0, 0), new Vector3(1, 1, 1)), 
             new Vector3(0, 0, 0), 
             Math.sqrt(3), 
             wood_texture
         ), 
         // Model.CreateCube(
         //     "cube2", 
-        //     new Transform(new Vector3(1, 1, 0), new Vector3(0, 0 * Math.PI / 180, 0), new Vector3(1, 1, 1)), 
+        //     new Transform(new Vector3(-2, 0, 0), new Vector3(0, 0, 0), new Vector3(1, 1, 1)), 
         //     new Vector3(0, 0, 0), 
-        //     Math.sqrt(3)
+        //     Math.sqrt(3), 
+        //     wood_texture
         // ), 
         // Model.CreateSphere(
         //     16, Color.Green(), 
@@ -83,7 +87,7 @@ async function Start(){
         // ), 
     ];
 
-    AssignMouseEvent();
+    // AssignMouseEvent();
 
     UpdateCanvas();
 }

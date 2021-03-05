@@ -27,7 +27,7 @@ export default class Camera{
 
         let s2 = Math.sqrt(2);
         this.clipPlanes = [
-            new Plane(new Vector3(0, 0, 1), -1), // Near
+            new Plane(new Vector3(0, 0, 1), 1), // Near
             new Plane(new Vector3(s2, 0, s2), 0), // Left
             new Plane(new Vector3(-s2, 0, s2), 0), // Right
             new Plane(new Vector3(0, -s2, s2), 0), // Top
@@ -49,34 +49,44 @@ export default class Camera{
 
     GetMatrix(){
         // multiple matrix rotate z * rotate y * rotate z * locate
-        let x = -this.transform.rotation.x;
-        let y = -this.transform.rotation.y;
-        let z = -this.transform.rotation.z;
+        // let x = -this.transform.rotation.x;
+        // let y = -this.transform.rotation.y;
+        // let z = -this.transform.rotation.z;
 
-        let A = (-Math.sin(x)) * this.transform.position.x + Math.cos(x) * this.transform.position.z;
-        let B = Math.cos(y) * this.transform.position.x + Math.sin(y) * A;
-        let C = Math.cos(x) * this.transform.position.y + Math.sin(x) * this.transform.position.z;
-        let D = (-Math.sin(y)) * this.transform.position.x + Math.cos(y) * A;
+        // let A = (-Math.sin(x)) * this.transform.position.x + Math.cos(x) * this.transform.position.z;
+        // let B = Math.cos(y) * this.transform.position.x + Math.sin(y) * A;
+        // let C = Math.cos(x) * this.transform.position.y + Math.sin(x) * this.transform.position.z;
+        // let D = (-Math.sin(y)) * this.transform.position.x + Math.cos(y) * A;
 
-        let temp = new Matrix4x4(
-            Math.cos(z)*Math.cos(y),    Math.cos(z)*Math.sin(y)*(-Math.sin(x))+Math.sin(z)*Math.cos(x), Math.cos(z)*Math.sin(y)*Math.cos(z)+Math.sin(z)*Math.sin(x),    Math.cos(z)*B + Math.sin(z)*C, 
-            -Math.sin(z)*Math.cos(y),   Math.sin(z)*Math.sin(y)*Math.sin(x)+Math.cos(z)*Math.cos(x),    (-Math.sin(z))*Math.sin(y)*Math.cos(x)+Math.cos(z)*Math.sin(x), (-Math.sin(z))*B + Math.cos(z)*C, 
-            Math.sin(y),                -Math.cos(y)*Math.sin(z),                                       Math.cos(y)*Math.cos(z),                                        (-Math.sin(y)) * this.transform.position.x + Math.cos(y) * A, 
-            0, 0, 0, 1
-        )
+        // let temp = new Matrix4x4(
+        //     Math.cos(z)*Math.cos(y),    Math.cos(z)*Math.sin(y)*(-Math.sin(x))+Math.sin(z)*Math.cos(x), Math.cos(z)*Math.sin(y)*Math.cos(z)+Math.sin(z)*Math.sin(x),    Math.cos(z)*B + Math.sin(z)*C, 
+        //     -Math.sin(z)*Math.cos(y),   Math.sin(z)*Math.sin(y)*Math.sin(x)+Math.cos(z)*Math.cos(x),    (-Math.sin(z))*Math.sin(y)*Math.cos(x)+Math.cos(z)*Math.sin(x), (-Math.sin(z))*B + Math.cos(z)*C, 
+        //     Math.sin(y),                -Math.cos(y)*Math.sin(z),                                       Math.cos(y)*Math.cos(z),                                        (-Math.sin(y)) * this.transform.position.x + Math.cos(y) * A, 
+        //     0, 0, 0, 1
+        // )
 
-        return temp;
+        // return temp;
+
+        let x = this.RotateXMatrix();
+        let y = this.RotateYMatrix();
+        let z = this.RotateZMatrix();
+
+        let rotateMatrix = z.Multiply3x3(y.Multiply3x3(x));
+
+        let matrix = Matrix4x4.FromMatrix3x3(rotateMatrix).Multiply4x4(this.LocateMatrix());
+
+        return matrix;
     }
     GetRotateMatrix(){
         let x = -this.transform.rotation.x;
-        let y = -this.transform.rotation.y;
+        let y = this.transform.rotation.y;
         let z = -this.transform.rotation.z;
         let rotateMat4 = new Matrix4x4(
             Math.cos(x)*Math.cos(y), Math.cos(x)*Math.sin(y)*Math.sin(z)+Math.sin(x)*Math.cos(z), -Math.cos(x)*Math.sin(y)*Math.cos(z)+Math.sin(x)*Math.sin(z), 0, 
             -Math.sin(x)*Math.cos(y), -Math.sin(x)*Math.sin(y)*Math.sin(z)+Math.cos(x)*Math.cos(z), Math.sin(x)*Math.sin(y)*Math.cos(z)+Math.cos(x)*Math.sin(z), 0, 
             Math.sin(y), -Math.cos(y)*Math.sin(z), Math.cos(y)*Math.cos(z), 0, 
             0, 0, 0, 1
-        )
+        );
 
         return rotateMat4;
     }
@@ -90,9 +100,9 @@ export default class Camera{
     }
     RotateYMatrix(){
         return new Matrix3x3(
-            Math.cos(this.transform.rotation.y), 0, Math.sin(this.transform.rotation.y), 
+            Math.cos(this.transform.rotation.y), 0, -Math.sin(this.transform.rotation.y), 
             0, 1, 0, 
-            -Math.sin(this.transform.rotation.y), 0, Math.cos(this.transform.rotation.y)
+            Math.sin(this.transform.rotation.y), 0, Math.cos(this.transform.rotation.y)
         )
     }
     RotateZMatrix(){
@@ -105,7 +115,7 @@ export default class Camera{
     LocateMatrix(){
         return new Matrix4x4(
             1, 0, 0, -this.transform.position.x, 
-            0, 1, 0, -this.transform.position.y, 
+            0, 1, 0, this.transform.position.y, 
             0, 0, 1, -this.transform.position.z, 
             0, 0, 0, 1
         )
@@ -133,7 +143,7 @@ export default class Camera{
             }
             else{
                 // let clipedModel = TrianglesClip(model, planes[i]);
-                return model;
+                // return model;
             }
         }
     
