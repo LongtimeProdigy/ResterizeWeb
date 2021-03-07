@@ -5,6 +5,7 @@ export default class Canvas{
         this.canvas = document.getElementById(canvasName);
         this.WIDTH = this.canvas.width;
         this.HEIGHT = this.canvas.height;
+        this.backgroundColor = backgroundColor;
 
         this.ctx = this.canvas.getContext("2d");
         this.ctx.fillStyle = backgroundColor;
@@ -21,13 +22,20 @@ export default class Canvas{
     }
 
     ClearCanvas(){
-        // 픽셀 정리
         this.ctx.clearRect(0, 0, this.WIDTH, this.HEIGHT);
-        // 컨텍스트 리셋
+        this.ctx.fillStyle = this.backgroundColor;
+        this.ctx.fillRect(0, 0, this.WIDTH, this.HEIGHT);
         this.ctx.beginPath();
-
+        
         this.id = this.ctx.getImageData(0, 0, this.WIDTH, this.HEIGHT);
         this.pixels = this.id.data;
+
+
+        this.depthBuffer = new Array();
+        this.depthBuffer.length = this.WIDTH * this.HEIGHT;
+        for(let i = 0; i < this.depthBuffer.length; ++i){
+            this.depthBuffer[i] = -Infinity;
+        }
     }
 
     UpdateCanvas(){
@@ -64,14 +72,14 @@ export default class Canvas{
     ViewportToCanvas(vec){
         return new Vector3(
                 (vec.x * this.WIDTH) | 0, 
-                (vec.y * this.HEIGHT) | 0, 
+                ((-vec.y + 1) * this.HEIGHT) | 0, 
                 vec.z
             );
     }
     CanvasToViewport(x, y){
         return new Vector3(
             (x / this.WIDTH), 
-            (y / this.HEIGHT), 
+            1 - (y / this.HEIGHT), 
             0
         );
     }

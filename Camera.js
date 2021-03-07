@@ -17,7 +17,7 @@ export default class Camera{
         this.transform = transform;
         this.d = d;
         this.fov = fov;
-        this.tan = Math.tan((fov * Math.PI / 180) / 2) * 2;
+        // this.tan = Math.tan(fov * Math.PI / 180) * 2;
 
         this.transform.rotation = new Vector3(
             this.transform.rotation.x * Math.PI / 180, 
@@ -78,44 +78,55 @@ export default class Camera{
         return matrix;
     }
     GetRotateMatrix(){
-        let x = -this.transform.rotation.x;
-        let y = this.transform.rotation.y;
-        let z = -this.transform.rotation.z;
-        let rotateMat4 = new Matrix4x4(
-            Math.cos(x)*Math.cos(y), Math.cos(x)*Math.sin(y)*Math.sin(z)+Math.sin(x)*Math.cos(z), -Math.cos(x)*Math.sin(y)*Math.cos(z)+Math.sin(x)*Math.sin(z), 0, 
-            -Math.sin(x)*Math.cos(y), -Math.sin(x)*Math.sin(y)*Math.sin(z)+Math.cos(x)*Math.cos(z), Math.sin(x)*Math.sin(y)*Math.cos(z)+Math.cos(x)*Math.sin(z), 0, 
-            Math.sin(y), -Math.cos(y)*Math.sin(z), Math.cos(y)*Math.cos(z), 0, 
-            0, 0, 0, 1
-        );
+        // let x = -this.transform.rotation.x;
+        // let y = -this.transform.rotation.y;
+        // let z = -this.transform.rotation.z;
+        // let rotateMat4 = new Matrix4x4(
+        //     Math.cos(x)*Math.cos(y), Math.cos(x)*Math.sin(y)*Math.sin(z)+Math.sin(x)*Math.cos(z), -Math.cos(x)*Math.sin(y)*Math.cos(z)+Math.sin(x)*Math.sin(z), 0, 
+        //     -Math.sin(x)*Math.cos(y), -Math.sin(x)*Math.sin(y)*Math.sin(z)+Math.cos(x)*Math.cos(z), Math.sin(x)*Math.sin(y)*Math.cos(z)+Math.cos(x)*Math.sin(z), 0, 
+        //     Math.sin(y), -Math.cos(y)*Math.sin(z), Math.cos(y)*Math.cos(z), 0, 
+        //     0, 0, 0, 1
+        // );
 
-        return rotateMat4;
+        let x = this.RotateXMatrix();
+        let y = this.RotateYMatrix();
+        let z = this.RotateZMatrix();
+
+        let rotateMatrix = z.Multiply3x3(y.Multiply3x3(x));
+
+        let matrix = Matrix4x4.FromMatrix3x3(rotateMatrix);
+
+        return matrix;
     }
 
     RotateXMatrix(){
+        let x = -this.transform.rotation.x;
         return new Matrix3x3(
             1, 0, 0, 
-            0, Math.cos(this.transform.rotation.x), Math.sin(this.transform.rotation.x), 
-            0, -Math.sin(this.transform.rotation.x), Math.cos(this.transform.rotation.x)
+            0, Math.cos(x), Math.sin(x), 
+            0, -Math.sin(x), Math.cos(x)
         )
     }
     RotateYMatrix(){
+        let y = -this.transform.rotation.y;
         return new Matrix3x3(
-            Math.cos(this.transform.rotation.y), 0, -Math.sin(this.transform.rotation.y), 
+            Math.cos(y), 0, Math.sin(y), 
             0, 1, 0, 
-            Math.sin(this.transform.rotation.y), 0, Math.cos(this.transform.rotation.y)
+            -Math.sin(y), 0, Math.cos(y)
         )
     }
     RotateZMatrix(){
+        let z = this.transform.rotation.z;
         return new Matrix3x3(
-            Math.cos(this.transform.rotation.z), Math.sin(this.transform.rotation.z), 0, 
-            -Math.sin(this.transform.rotation.z), Math.cos(this.transform.rotation.z), 0, 
+            Math.cos(z), Math.sin(z), 0, 
+            -Math.sin(z), Math.cos(z), 0, 
             0, 0, 1
         )
     }
     LocateMatrix(){
         return new Matrix4x4(
             1, 0, 0, -this.transform.position.x, 
-            0, 1, 0, this.transform.position.y, 
+            0, 1, 0, -this.transform.position.y, 
             0, 0, 1, -this.transform.position.z, 
             0, 0, 0, 1
         )
@@ -188,9 +199,16 @@ export default class Camera{
 
     ProjectVertex(v){
         return new Vector3(
-            v.x / (this.tan * v.z) + 0.5, 
-            v.y / (this.tan * v.z) + 0.5, 
+            v.x / v.z / (2 * Math.tan((this.fov / 2) * Math.PI / 180)) + 0.5, 
+            v.y / v.z / (2 * Math.tan((this.fov / 2) * Math.PI / 180)) + 0.5, 
             v.z
+        );
+    }
+    UnProjectVertex(pos, iz){
+        return new Vector3(
+            (pos.x - 0.5) * 2 * Math.tan((this.fov / 2) * Math.PI / 180) * (1 / iz), 
+            (pos.y - 0.5) * 2 * Math.tan((this.fov / 2) * Math.PI / 180) * (1 / iz), 
+            1 / iz
         );
     }
 }

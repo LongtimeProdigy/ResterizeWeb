@@ -1,5 +1,7 @@
 import Vector3 from "./Vector3.js";
 import Color from "./Color.js";
+import Vertex from "./Vertex.js";
+import Vector2 from "./Vector2.js";
 
 export default class Renderer{
     static FLAT_LIGHTING = 1;
@@ -11,22 +13,23 @@ export default class Renderer{
     }
 
     RenderModel(camera, canvas, target, lights){
-        let projected = [];
-        
         let cameraMatrix = camera.GetMatrix();
         let modelMatrix = target.GetMatrix();
         let matrix = cameraMatrix.Multiply4x4(modelMatrix);
         let center = matrix.MultiplyVector3(target.center);
-
+        
         let model = camera.PlaneClip(center, target);
         if(model == null){
+            // console.log("Plane Culling");
             return;
         }
         
         let triangles = this.CullBackFace(model, matrix);
         model.triangles = triangles;
-        console.log(model);
+        // console.log(model);
         
+        let projected = [];
+        let viewport = [];
         for(let j = 0; j < model.vertices.length; ++j){
             projected.push(
                 canvas.ViewportToCanvas(
@@ -35,10 +38,26 @@ export default class Renderer{
                     )
                 )
             );
+
+            viewport.push(camera.ProjectVertex(
+                matrix.MultiplyVector3(model.vertices[j].position)
+            ));
         }
-                    
+        // console.log(
+        //     Math.tan(90 / 2), 
+        //     (2 * Math.tan(90 / 2)) + 0.5
+        // )
+        // console.log(viewport, projected);
+        
+        let modelRotateMatrix = model.GetRotateMatrix();
+        let cameraRotateMatrix
         for(let j = 0; j < model.triangles.length; ++j){
-            this.DrawFillTriangle(model.triangles[j], model.vertices, projected, canvas, camera, lights, matrix, model.texture);
+            // if(j == 4){
+                this.DrawFillTriangle(
+                    model.triangles[j], model.vertices, projected
+                    , canvas, camera, lights, model.texture, matrix, modelRotateMatrix
+                    );
+            // }
         }
     }
 
@@ -55,7 +74,6 @@ export default class Renderer{
             let dot = Vector3.Dot(nor, dtc);
             if(dot > 0){
                 // front
-                console.log(model.name, "cull");
             }
             else{
                 // back
@@ -109,168 +127,121 @@ export default class Renderer{
         this.DrawLine(P2, P0, color);
     }
     
-    DrawFillTriangle(triangle, vertices, projected, canvas, camera, lights, matrix, texture){
+    DrawFillTriangle(triangle, vertexes, projected, canvas, camera, lights, texture, matrix, modelRotateMatrix){
         let index = [0, 1, 2];
-        // if(pvertices[index[1]].y < pvertices[index[1]].y) { let temp2 = index[0]; index[0] = index[1]; index[1] = temp2; }
-        // if(pvertices[index[2]].y < pvertices[index[0]].y) { let temp2 = index[0]; index[0] = index[2]; index[2] = temp2; }
-        // if(pvertices[index[2]].y < pvertices[index[1]].y) { let temp2 = index[1]; index[1] = index[2]; index[2] = temp2; }
-        if(projected[triangle.index[1]].y < projected[triangle.index[0]].y)
+        if(projected[triangle.index[index[1]]].y < projected[triangle.index[index[0]]].y)
         {
-            let swap = triangle.index[0]; triangle.index[0] = triangle.index[1]; triangle.index[1] = swap;
+            // let swap = triangle.index[0]; triangle.index[0] = triangle.index[1]; triangle.index[1] = swap;
             let swap2 = index[0]; index[0] = index[1]; index[1] = swap2;
         }
-        if(projected[triangle.index[2]].y < projected[triangle.index[0]].y)
+        if(projected[triangle.index[index[2]]].y < projected[triangle.index[index[0]]].y)
         {
-            let swap = triangle.index[0]; triangle.index[0] = triangle.index[2]; triangle.index[2] = swap;
+            // let swap = triangle.index[0]; triangle.index[0] = triangle.index[2]; triangle.index[2] = swap;
             let swap2 = index[0]; index[0] = index[2]; index[2] = swap2;
         }
-        if(projected[triangle.index[2]].y < projected[triangle.index[1]].y)
+        if(projected[triangle.index[index[2]]].y < projected[triangle.index[index[1]]].y)
         {
-            let swap = triangle.index[2]; triangle.index[2] = triangle.index[1]; triangle.index[1] = swap;
+            // let swap = triangle.index[2]; triangle.index[2] = triangle.index[1]; triangle.index[1] = swap;
             let swap2 = index[2]; index[2] = index[1]; index[1] = swap2;
         }
     
-        // let x01 = this.InterpolateFloatTriangle(
-        //     projected[triangle.index[0]].y, projected[triangle.index[0]].x, 
-        //     projected[triangle.index[1]].y, projected[triangle.index[1]].x
-        //     ); 
-        // let x12 = this.InterpolateFloatTriangle(
-        //     projected[triangle.index[1]].y, projected[triangle.index[1]].x, 
-        //     projected[triangle.index[2]].y, projected[triangle.index[2]].x
-        //     );
-        // let x02 = this.InterpolateFloatTriangle(
-        //     projected[triangle.index[0]].y, projected[triangle.index[0]].x, 
-        //     projected[triangle.index[2]].y, projected[triangle.index[2]].x
-        //     );
-
-        // let [x02, x012] = EdgeInterpolate(p0.y, p0.x, p1.y, p1.x, p2.y, p2.x);
-        // let [iz02, iz012] = EdgeInterpolate(p0.y, 1.0/v0.z, p1.y, 1.0/v1.z, p2.y, 1.0/v2.z);
         let x02, x012;
         [x02, x012] = this.InterpolateTriangle(
-            projected[triangle.index[0]].y, projected[triangle.index[0]].x, 
-            projected[triangle.index[1]].y, projected[triangle.index[1]].x, 
-            projected[triangle.index[2]].y, projected[triangle.index[2]].x
+            projected[triangle.index[index[0]]].y, projected[triangle.index[index[0]]].x, 
+            projected[triangle.index[index[1]]].y, projected[triangle.index[index[1]]].x, 
+            projected[triangle.index[index[2]]].y, projected[triangle.index[index[2]]].x
         );
     
-        // let h01 = InterpolateFloat(P0.y, P0.x, P1.y, P1.x);
-        // let h12 = InterpolateFloat(P1.y, P1.x, P2.y, P2.x);
-        // let h02 = InterpolateFloat(P0.y, P0.x, P2.y, P2.x);
-    
-        // let z01 = this.InterpolateFloat(
-        //     projected[triangle.index[0]].y, projected[triangle.index[0]].z, 
-        //     projected[triangle.index[1]].y, projected[triangle.index[1]].z
-        //     );
-        // let z12 = this.InterpolateFloat(
-        //     projected[triangle.index[1]].y, projected[triangle.index[1]].z, 
-        //     projected[triangle.index[2]].y, projected[triangle.index[2]].z
-        //     );
-        // let z02 = this.InterpolateFloat(
-        //     projected[triangle.index[0]].y, projected[triangle.index[0]].z, 
-        //     projected[triangle.index[2]].y, projected[triangle.index[2]].z
-        //     );
         let z02, z012;
         [z02, z012] = this.InterpolateFloatTriangle(
-            projected[triangle.index[0]].y, 1 / projected[triangle.index[0]].z, 
-            projected[triangle.index[1]].y, 1 / projected[triangle.index[1]].z, 
-            projected[triangle.index[2]].y, 1 / projected[triangle.index[2]].z
+            projected[triangle.index[index[0]]].y, 1 / projected[triangle.index[index[0]]].z, 
+            projected[triangle.index[index[1]]].y, 1 / projected[triangle.index[index[1]]].z, 
+            projected[triangle.index[index[2]]].y, 1 / projected[triangle.index[index[2]]].z
         );
+        
+        let cameraRotate = camera.GetRotateMatrix();
+        // console.log(cameraRotate);
+        let rotateMatrix = cameraRotate.Multiply4x4(modelRotateMatrix);
+        let vertices = [];
+        for(let i = 0; i < vertexes.length; ++i){
+            vertices.push(new Vertex(
+                matrix.MultiplyVector3(vertexes[i].position), 
+                rotateMatrix.MultiplyVector3(vertexes[i].normal), 
+                vertexes[i].uv, 
+                vertexes[i].color
+            ));
+        }
+        // console.log(
+        //     vertices[triangle.index[index[0]]], 
+        //     vertices[triangle.index[index[1]]], 
+        //     vertices[triangle.index[index[2]]]
+        // );
             
         // for uv
         let accurarity = true;
         let u02, u012, v02, v012;
         if(!accurarity){
             [u02, u012] = this.InterpolateFloatTriangle(
-                projected[triangle.index[0]].y, vertices[triangle.index[0]].uv.x,
-                projected[triangle.index[1]].y, vertices[triangle.index[1]].uv.x,
-                projected[triangle.index[2]].y, vertices[triangle.index[2]].uv.x
+                projected[triangle.index[index[0]]].y, vertices[triangle.index[index[0]]].uv.x,
+                projected[triangle.index[index[1]]].y, vertices[triangle.index[index[1]]].uv.x,
+                projected[triangle.index[index[2]]].y, vertices[triangle.index[index[2]]].uv.x
                 );
             [v02, v012] = this.InterpolateFloatTriangle(
-                projected[triangle.index[0]].y, vertices[triangle.index[0]].uv.y,
-                projected[triangle.index[1]].y, vertices[triangle.index[1]].uv.y,
-                projected[triangle.index[2]].y, vertices[triangle.index[2]].uv.y
+                projected[triangle.index[index[0]]].y, vertices[triangle.index[index[0]]].uv.y,
+                projected[triangle.index[index[1]]].y, vertices[triangle.index[index[1]]].uv.y,
+                projected[triangle.index[index[2]]].y, vertices[triangle.index[index[2]]].uv.y
                 );
         }
         else{
             [u02, u012] = this.InterpolateFloatTriangle(
-                projected[triangle.index[0]].y, vertices[triangle.index[0]].uv.x / matrix.MultiplyVector3(vertices[triangle.index[0]].position).z,
-                projected[triangle.index[1]].y, vertices[triangle.index[1]].uv.x / matrix.MultiplyVector3(vertices[triangle.index[1]].position).z,
-                projected[triangle.index[2]].y, vertices[triangle.index[2]].uv.x / matrix.MultiplyVector3(vertices[triangle.index[2]].position).z
+                projected[triangle.index[index[0]]].y, vertices[triangle.index[index[0]]].uv.x / vertices[triangle.index[index[0]]].position.z,
+                projected[triangle.index[index[1]]].y, vertices[triangle.index[index[1]]].uv.x / vertices[triangle.index[index[1]]].position.z,
+                projected[triangle.index[index[2]]].y, vertices[triangle.index[index[2]]].uv.x / vertices[triangle.index[index[2]]].position.z
                 );
             [v02, v012] = this.InterpolateFloatTriangle(
-                projected[triangle.index[0]].y, vertices[triangle.index[0]].uv.y / matrix.MultiplyVector3(vertices[triangle.index[0]].position).z,
-                projected[triangle.index[1]].y, vertices[triangle.index[1]].uv.y / matrix.MultiplyVector3(vertices[triangle.index[1]].position).z,
-                projected[triangle.index[2]].y, vertices[triangle.index[2]].uv.y / matrix.MultiplyVector3(vertices[triangle.index[2]].position).z
+                projected[triangle.index[index[0]]].y, vertices[triangle.index[index[0]]].uv.y / vertices[triangle.index[index[0]]].position.z,
+                projected[triangle.index[index[1]]].y, vertices[triangle.index[index[1]]].uv.y / vertices[triangle.index[index[1]]].position.z,
+                projected[triangle.index[index[2]]].y, vertices[triangle.index[index[2]]].uv.y / vertices[triangle.index[index[2]]].position.z
                 );
         }
         
-        let color2 = Color.Random();
-        // console.log(vertices[triangle.index[0]], vertices[triangle.index[1]], vertices[triangle.index[2]], color2)
-        // console.log(
-        //     matrix.MultiplyVector3(vertices[triangle.index[0]].position).z, 
-        //     matrix.MultiplyVector3(vertices[triangle.index[1]].position).z, 
-        //     matrix.MultiplyVector3(vertices[triangle.index[2]].position).z
-        // )
-        // console.log(
-        //     vertices[triangle.index[0]].uv, 
-        //     vertices[triangle.index[1]].uv, 
-        //     vertices[triangle.index[2]].uv
-        // )
-        // console.log(
-        //     projected[triangle.index[0]], 
-        //     projected[triangle.index[1]], 
-        //     projected[triangle.index[2]]
-        // )
-        // console.log(u02, u012, v02, v012, z02, z012);
-        
-        // let iz02, iz012;
-        // [iz02, iz012] = this.InterpolateTriangle(
-        //     pvertices[index[0]].y, 1 / vertices[index[0]].z, 
-        //     pvertices[index[1]].y, 1 / vertices[index[1]].z, 
-        //     pvertices[index[2]].y, 1 / vertices[index[2]].z
-        // );
-    
-        // // for lighting
-        // let normal0 = (normals[triangle.index[0]]);
-        // let normal1 = (normals[triangle.index[1]]);
-        // let normal2 = (normals[triangle.index[2]]);
-    
         let intensity = 0;
         let i02 = [], i012 = [];
         let nx02, nx012, ny02, ny012, nz02, nz012;
         switch(this.LightingMode){
             case Renderer.FLAT_LIGHTING:
                 let center = new Vector3(
-                    (vertices[triangle.index[0]].position.x + vertices[triangle.index[1]].position.x + vertices[triangle.index[2]].position.x) / 3.0, 
-                    (vertices[triangle.index[0]].position.y + vertices[triangle.index[1]].position.y + vertices[triangle.index[2]].position.y) / 3.0, 
-                    (vertices[triangle.index[0]].position.z + vertices[triangle.index[1]].position.z + vertices[triangle.index[2]].position.z) / 3.0, 
+                    (vertices[triangle.index[index[0]]].position.x + vertices[triangle.index[index[0]]].position.x + vertices[triangle.index[index[0]]].position.x) / 3.0, 
+                    (vertices[triangle.index[index[1]]].position.y + vertices[triangle.index[index[1]]].position.y + vertices[triangle.index[index[1]]].position.y) / 3.0, 
+                    (vertices[triangle.index[index[2]]].position.z + vertices[triangle.index[index[2]]].position.z + vertices[triangle.index[index[2]]].position.z) / 3.0, 
                 );
                 intensity = this.ComputeLighting(lights, center, vertices[triangle.index[0]].normal, camera);
             break;
             case Renderer.GOURAUD_LIGHTING:
-                let i0 = this.ComputeLighting(lights, vertices[triangle.index[0]].position, vertices[triangle.index[0]].normal, camera);
-                let i1 = this.ComputeLighting(lights, vertices[triangle.index[1]].position, vertices[triangle.index[1]].normal, camera);
-                let i2 = this.ComputeLighting(lights, vertices[triangle.index[2]].position, vertices[triangle.index[2]].normal, camera);
+                let i0 = this.ComputeLighting(lights, vertices[triangle.index[index[0]]].position, vertices[triangle.index[index[0]]].normal, camera);
+                let i1 = this.ComputeLighting(lights, vertices[triangle.index[index[1]]].position, vertices[triangle.index[index[1]]].normal, camera);
+                let i2 = this.ComputeLighting(lights, vertices[triangle.index[index[2]]].position, vertices[triangle.index[index[2]]].normal, camera);
                 [i02, i012] = this.InterpolateFloatTriangle(
-                    projected[triangle.index[0]].y, i0, 
-                    projected[triangle.index[1]].y, i1, 
-                    projected[triangle.index[2]].y, i2
+                    projected[triangle.index[index[0]]].y, i0, 
+                    projected[triangle.index[index[1]]].y, i1, 
+                    projected[triangle.index[index[2]]].y, i2
                     );
             break;
             case Renderer.PHONG_LIGHTING:
                 [nx02, nx012] = this.InterpolateFloatTriangle(
-                    projected[triangle.index[0]].y, vertices[triangle.index[0]].normal.x, 
-                    projected[triangle.index[1]].y, vertices[triangle.index[1]].normal.x, 
-                    projected[triangle.index[2]].y, vertices[triangle.index[2]].normal.x
+                    projected[triangle.index[index[0]]].y, vertices[triangle.index[index[0]]].normal.x, 
+                    projected[triangle.index[index[1]]].y, vertices[triangle.index[index[1]]].normal.x, 
+                    projected[triangle.index[index[2]]].y, vertices[triangle.index[index[2]]].normal.x
                     );
                 [ny02, ny012] = this.InterpolateFloatTriangle(
-                    projected[triangle.index[0]].y, vertices[triangle.index[0]].normal.y, 
-                    projected[triangle.index[1]].y, vertices[triangle.index[1]].normal.y, 
-                    projected[triangle.index[2]].y, vertices[triangle.index[2]].normal.y
+                    projected[triangle.index[index[0]]].y, vertices[triangle.index[index[0]]].normal.y, 
+                    projected[triangle.index[index[1]]].y, vertices[triangle.index[index[1]]].normal.y, 
+                    projected[triangle.index[index[2]]].y, vertices[triangle.index[index[2]]].normal.y
                     );
                 [nz02, nz012] = this.InterpolateFloatTriangle(
-                    projected[triangle.index[0]].y, vertices[triangle.index[0]].normal.z, 
-                    projected[triangle.index[1]].y, vertices[triangle.index[1]].normal.z, 
-                    projected[triangle.index[2]].y, vertices[triangle.index[2]].normal.z
+                    projected[triangle.index[index[0]]].y, vertices[triangle.index[index[0]]].normal.z, 
+                    projected[triangle.index[index[1]]].y, vertices[triangle.index[index[1]]].normal.z, 
+                    projected[triangle.index[index[2]]].y, vertices[triangle.index[index[2]]].normal.z
                     );
             break;
         }
@@ -284,7 +255,6 @@ export default class Renderer{
         let u_left, u_right, v_left, v_right;
         if(x02[m] < x012[m]){
             [x_left, x_right] = [x02, x012];
-            // [h_left, h_right] = [h02, h012];
             [z_left, z_right] = [z02, z012];
             [i_left, i_right] = [i02, i012];
     
@@ -297,7 +267,6 @@ export default class Renderer{
         }
         else{
             [x_left, x_right] = [x012, x02];
-            // [h_left, h_right] = [h012, h02];
             [z_left, z_right] = [z012, z02];
             [i_left, i_right] = [i012, i02];
     
@@ -308,33 +277,27 @@ export default class Renderer{
             [u_left, u_right] = [u012, u02];
             [v_left, v_right] = [v012, v02];
         }
-        // console.log(x_left, x_right);
-    
-        for(let y = projected[triangle.index[0]].y; y < projected[triangle.index[2]].y; ++y){
-            let x_l = x_left[y - projected[triangle.index[0]].y];
-            let x_r = x_right[y - projected[triangle.index[0]].y];
+        
+        for(let y = projected[triangle.index[index[0]]].y; y < projected[triangle.index[index[2]]].y; ++y){
+            let x_l = x_left[y - projected[triangle.index[index[0]]].y];
+            let x_r = x_right[y - projected[triangle.index[index[0]]].y];
             
-            // let h_segment = InterpolateFloat(x_l, h_left[y - P0.y], x_r, h_right[y - P0.y]);
             let zscan = this.InterpolateFloat(
-                x_l, z_left[y - projected[triangle.index[0]].y], 
-                x_r, z_right[y - projected[triangle.index[0]].y]
+                x_l, z_left[y - projected[triangle.index[index[0]]].y], 
+                x_r, z_right[y - projected[triangle.index[index[0]]].y]
                 );
-            // let iz_segment = this.InterpolateFloat(
-            //     x_l, iz_left[y - projected[triangle.index[0]].y], 
-            //     x_r, iz_right[y - projected[triangle.index[0]].y]
-            //     );
     
             let il, ir, iscan;
             let nxl, nxr, nyl, nyr, nzl, nzr;
             let nxscan, nyscan, nzscan;
             if(this.LightingMode == Renderer.GOURAUD_LIGHTING){
-                [il, ir] = [i_left[y - projected[triangle.index[0]].y], i_right[y - projected[triangle.index[0]].y]];
+                [il, ir] = [i_left[y - projected[triangle.index[index[0]]].y], i_right[y - projected[triangle.index[index[0]]].y]];
                 iscan = this.InterpolateFloat(x_l, il, x_r, ir);
             }
             else if(this.LightingMode == Renderer.PHONG_LIGHTING){
-                [nxl, nxr] = [nx_left[y - projected[triangle.index[0]].y], nx_right[y - projected[triangle.index[0]].y]];
-                [nyl, nyr] = [ny_left[y - projected[triangle.index[0]].y], ny_right[y - projected[triangle.index[0]].y]];
-                [nzl, nzr] = [nz_left[y - projected[triangle.index[0]].y], nz_right[y - projected[triangle.index[0]].y]];
+                [nxl, nxr] = [nx_left[y - projected[triangle.index[index[0]]].y], nx_right[y - projected[triangle.index[index[0]]].y]];
+                [nyl, nyr] = [ny_left[y - projected[triangle.index[index[0]]].y], ny_right[y - projected[triangle.index[index[0]]].y]];
+                [nzl, nzr] = [nz_left[y - projected[triangle.index[index[0]]].y], nz_right[y - projected[triangle.index[index[0]]].y]];
     
                 nxscan = this.InterpolateFloat(x_l, nxl, x_r, nxr);
                 nyscan = this.InterpolateFloat(x_l, nyl, x_r, nyr);
@@ -342,24 +305,16 @@ export default class Renderer{
             }
     
             let uscan = this.InterpolateFloat(
-                x_l, u_left[y - projected[triangle.index[0]].y], 
-                x_r, u_right[y - projected[triangle.index[0]].y]
+                x_l, u_left[y - projected[triangle.index[index[0]]].y], 
+                x_r, u_right[y - projected[triangle.index[index[0]]].y]
                 );
             let vscan = this.InterpolateFloat(
-                x_l, v_left[y - projected[triangle.index[0]].y], 
-                x_r, v_right[y - projected[triangle.index[0]].y]
+                x_l, v_left[y - projected[triangle.index[index[0]]].y], 
+                x_r, v_right[y - projected[triangle.index[index[0]]].y]
                 );
-            // console.log(vscan)
     
             for(let x = x_l; x < x_r; ++x){
-                // let mul = h_segment[x - x_l];
                 let depth = zscan[x - x_l];
-                // let shaded_color = new Color(
-                //     color.r * mul, 
-                //     color.g * mul, 
-                //     color.b * mul, 
-                //     255
-                // );
     
                 if(this.LightingMode == Renderer.GOURAUD_LIGHTING){
                     intensity = iscan[x - x_l];
@@ -367,7 +322,7 @@ export default class Renderer{
                 else if(this.LightingMode == Renderer.PHONG_LIGHTING){
                     let vertex = this.UnProjectVertex(x, y, depth, camera, canvas);
                     let normal = new Vector3(nxscan[x - x_l], nyscan[x - x_l], nzscan[x - x_l]);
-                    intensity = this.ComputeLighting(lights, vertex, normal, camera);
+                    intensity = this.ComputeLighting(lights, vertex, normal, camera, x, y);
                 }
                 
                 let u, v;
@@ -379,10 +334,9 @@ export default class Renderer{
                     u = uscan[x - x_l];
                     v = vscan[x - x_l];
                 }
-                // console.log(x, y, u, v);
 
                 if(texture == undefined){
-                    canvas.PutPixel(x, y, depth, Color.MultiplyScalar(vertices[triangle.index[0]].color, intensity));
+                    canvas.PutPixel(x, y, depth, Color.MultiplyScalar(vertices[triangle.index[index[0]]].color, intensity));
                 }
                 else{
                     let color = texture.GetTexel(u, v);
@@ -393,12 +347,15 @@ export default class Renderer{
         }
     }
 
-    UnProjectVertex(x, y, z, camera, canvas) {
-        let oz = 1 / z;
-        let ux = x * oz / camera.d;
-        let uy = y * oz / camera.d;
-        let p2d = canvas.CanvasToViewport(ux, uy);
-        return new Vector3(p2d.x, p2d.y, oz);
+    UnProjectVertex(x, y, iz, camera, canvas) {
+        let c2v = canvas.CanvasToViewport(x, y);
+        // let z = 1 / iz;
+        // let ux = c2v.x * iz / camera.d;
+        // let uy = c2v.y * iz / camera.d;
+        // return new Vector3(ux, uy, oz);
+        let temp = camera.UnProjectVertex(c2v, iz);
+        // console.log(x, y, 1 / iz, "\n", c2v, "\n", temp);
+        return temp;
     }
 
     BasicInterfolate(i0, d0, i1, d1){
@@ -513,18 +470,21 @@ export default class Renderer{
                     vl = cameraMatrix.MultiplyVector3(Vector3.MultiplyScalar(light.direction, -1));
                 }
                 else if(light.type == "point"){
-                    let lightMatrix = light.GetMatrix();
-                    let cameraMatrix = camera.GetMatrix();
-                    let matrix = cameraMatrix.Multiply4x4(lightMatrix);
-                    vl = (Vector3.Minus(matrix.MultiplyVector3(light.position), vertex).Normalized());
+                    var cameraMatrix = camera.GetMatrix();
+                    vl = Vector3.Minus(cameraMatrix.MultiplyVector3(light.position), vertex).Normalized();
                 }
-    
+                
                 // Diffuse
                 let dot = Vector3.Dot(vl, normal.Normalized());
                 if(dot > 0){
                     illumination += dot * light.intensity;
                 }
-    
+                // console.log(
+                //     "lightPos:", cameraMatrix.MultiplyVector3(light.position), 
+                //     "\nlightDir:", Vector3.Minus(cameraMatrix.MultiplyVector3(light.position), vertex), 
+                //     "\ndot:", dot, 
+                // )
+                
                 // Specular
                 let reflected = this.Reflect(vl, normal).Normalized();
                 let rdotv = Vector3.Dot(reflected, Vector3.Minus(new Vector3(0, 0, 0), vertex).Normalized());
@@ -533,6 +493,14 @@ export default class Renderer{
                     illumination += Math.pow(rdotv, specular) * light.intensity;
                 }
                 // console.log(vl, normal)
+                // console.log(
+                //     "x, y:", x, y, 
+                //     "\nvertex:", vertex, 
+                //     "\nlightPos", cameraMatrix.MultiplyVector3(light.position), 
+                //     "\nlightDir",  Vector3.Minus(cameraMatrix.MultiplyVector3(light.position), vertex), 
+                //     "\nnormal:", normal, 
+                //     "\nintensity:", illumination
+                //     )
             }
         }
     

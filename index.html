@@ -3,17 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RayTrace</title>
+    <title>CPU Resterize</title>
+    <style type=text/css> 
+        div#leftupper{
+            width: 580px;
+            height: 160px;
+            padding: 5px;
+            border: 5px ridge #bcbcbc;
+            text-align: center;
+        }
+        #side_left{
+            width: 100%;
+            height: 100%;
+            float: left;
+        }
+        #leftinner
+        {
+            float: left;
+            width: 31%;
+            height: 100%;
+            margin: 5px;
+        }
+        #middleinner{
+            float: left;
+            width: 31%;
+            height: 100%;
+            margin: 5px;
+        }
+        #rightinner{
+            float: left;
+            width: 31%;
+            height: 100%;
+            margin: 5px;
+        }
+     </style>
 </head>
 <body>
-    <canvas id="RayTrace" width="600" height="600" style="border: 1px grey solid"></canvas>
+    <canvas id="CPU Resterize" width="600" height="600" style="border: 1px grey solid"></canvas>
+    <div id="leftupper">
+        <div id="side_left">
+            <p style="font-size: 30px; margin: 0px; font-weight: bold;">CAMERA</p>
+            <div id="leftinner">
+                <b>Position(x, y, z)</b>
+                <div>
+                    <button style="height: 30%; width: 30%;" id="CameraPositionXUP">↑</button>
+                    <button style="height: 30%; width: 30%;" id="CameraPositionYUP">↑</button>
+                    <button style="height: 30%; width: 30%;" id="CameraPositionZUP">↑</button>
+                </div>
+                <div>
+                    <input style="height: 30%; width: 25.8%" value="0" id="CameraPositionX">
+                    <input style="height: 30%; width: 25.8%" value="0" id="CameraPositionY">
+                    <input style="height: 30%; width: 25.8%" value="0" id="CameraPositionZ">
+                </div>
+                <div>
+                    <button style="height: 30%; width: 30%;" id="CameraPositionXDOWN">↓</button>
+                    <button style="height: 30%; width: 30%;" id="CameraPositionYDOWN">↓</button>
+                    <button style="height: 30%; width: 30%;" id="CameraPositionZDOWN">↓</button>
+                </div>
+            </div>
+            <div id="middleinner">
+                <b>Rotation(x, y, z)</b>
+                <div>
+                    <button style="height: 30%; width: 30%;" id="CameraRotationXUP">↑</button>
+                    <button style="height: 30%; width: 30%;" id="CameraRotationYUP">↑</button>
+                    <button style="height: 30%; width: 30%;" id="CameraRotationZUP">↑</button>
+                </div>
+                <div>
+                    <input style="height: 30%; width: 25.8%" value="0" id="CameraRotationX">
+                    <input style="height: 30%; width: 25.8%" value="0" id="CameraRotationY">
+                    <input style="height: 30%; width: 25.8%" value="0" id="CameraRotationZ">
+                </div>
+                <div>
+                    <button style="height: 30%; width: 30%;" id="CameraRotationXDOWN">↓</button>
+                    <button style="height: 30%; width: 30%;" id="CameraRotationYDOWN">↓</button>
+                    <button style="height: 30%; width: 30%;" id="CameraRotationZDOWN">↓</button>
+                </div>
+            </div>
+            <div id="rightinner">
+                <b>Background(r, g, b)</b>
+                <div>
+                    <input style="height: 30%; width: 25.8%" value="0" id="BackgroundColorR">
+                    <input style="height: 30%; width: 25.8%" value="0" id="BackgroundColorG">
+                    <input style="height: 30%; width: 25.8%" value="0" id="BackgroundColorB">
+                </div>
+                <b>Field of View</b>
+                <div>
+                    <button style="height: 30%; width: 30%;" id="CameraFOVDOWN">←</button>
+                    <input style="height: 30%; width: 25.8%;" id="CameraFOV" value="45">
+                    <button style="height: 30%; width: 30%;" id="CameraFOVUP">→</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="leftupper">
+        <p style="font-size: 30px; margin: 0px; font-weight: bold;">LIGHTING</p>
+        <div style="width: 70%; height: 75%; float: left; border: 2px dashed #ffc200;">
+            <div style="width: 20%; height: 100%; float: left;">
+                <div style="width: 100%; height: 25%;"></div>
+                <div style="width: 100%; height: 25%;">Ambient</div>
+                <div style="width: 100%; height: 25%;">Direcional</div>
+                <div style="width: 100%; height: 25%;">Point</div>
+            </div>
+            <div style="width: 15%; height: 100%; float: left;">
+                <div style="width: 100%; height: 25%;;">Intensity</div>
+                <input style="width: 90%; height: 20%" value="0.2" id="AmbientIntensity">
+                <input style="width: 90%; height: 20%" value="0.4" id="DirectionalIntensity">
+                <input style="width: 90%; height: 20%" value="0.4" id="PointIntensity">
+            </div>
+            <div style="width: 65%; height: 100%; float: left;">
+                <div style="width: 100%; height: 25%;">Directional: Direction(x, y, z)</div>
+                <div style="width: 100%; height: 25%;">Point: Position(x, y, z)</div>
+                <div style="width: 100%; height: 25%;">
+                    <input style="width: 25%; height: 80%;" value="0" id="DirectionVector3X">
+                    <input style="width: 25%; height: 80%;" value="0" id="DirectionVector3Y">
+                    <input style="width: 25%; height: 80%;" value="0" id="DirectionVector3Z">
+                </div>
+                <div style="width: 100%; height: 25%;">
+                    <input style="width: 25%; height: 80%;" value="0" id="PointVector3X">
+                    <input style="width: 25%; height: 80%;" value="0" id="PointVector3Y">
+                    <input style="width: 25%; height: 80%;" value="0" id="PointVector3Z">
+                </div>
+            </div>
+        </div>
+        <!-- <div style="float: left; width: 25%; height: 75%; border: 2px dashed #ffc200;">
+            <div style="width: 100%; height: 20%;">Bounding Count</div>
+            <input style="width: 50%; height: 15%;" value="3" id="BoundingCount">
+            <div style="width: 100%; height: 35%;">Shadow Merge(intensity)</div>
+            <label><input type="checkbox" id="ShadowMerge"></label>
+            <input style="width: 50%; height: 15%;" value="0" id="ShadowMergeIntensity">
+        </div> -->
+    </div>
+
+    <div id="leftupper">
+        <p style="font-size: 30px; margin: 0px; font-weight: bold;">CUBES</p>
+        <div style="width: 15%; height: 75%; float: left;">
+            <div style="width: 100%; height: 20%;">Name</div>
+            <div style="width: 100%; height: 20%;">Red</div>
+            <div style="width: 100%; height: 20%;">Green</div>
+            <div style="width: 100%; height: 20%;">Blue</div>
+            <!-- <div style="width: 100%; height: 20%;">Plane</div> -->
+        </div>
+        <div style="width: 25%; height: 75%; float: left; border: 2px dashed #ffc200;">
+            <div style="width: 100%; height: 20%;">Position(x, y, z)</div>
+            <div style="width: 100%; height: 20%;">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="RedPositionX">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="RedPositionY">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="RedPositionZ">
+            </div>
+            <div style="width: 100%; height: 20%;">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="GreenPositionX">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="GreenPositionY">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="GreenPositionZ">
+            </div>
+            <div style="width: 100%; height: 20%;">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="BluePositionX">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="BluePositionY">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="BluePositionZ">
+            </div>
+            <!-- <div style="width: 100%; height: 20%;">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="PlanePositionX">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="PlanePositionY">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="PlanePositionZ">
+            </div> -->
+        </div>
+        <div style="width: 25%; height: 75%; float: left; border: 2px dashed #ffc200;">
+            <div style="width: 100%; height: 20%;">Rotation(x, y, z)</div>
+            <div style="width: 100%; height: 20%;">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="RedRotationX">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="RedRotationY">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="RedRotationZ">
+            </div>
+            <div style="width: 100%; height: 20%;">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="GreenRotationX">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="GreenRotationY">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="GreenRotationZ">
+            </div>
+            <div style="width: 100%; height: 20%;">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="BlueRotationX">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="BlueRotationY">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="BlueRotationZ">
+            </div>
+        </div>
+        <div style="width: 25%; height: 75%; float: left; border: 2px dashed #ffc200;">
+            <div style="width: 100%; height: 20%;">Scale(x, y, z)</div>
+            <div style="width: 100%; height: 20%;">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="RedScaleX">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="RedScaleY">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="RedScaleZ">
+            </div>
+            <div style="width: 100%; height: 20%;">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="GreenScaleX">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="GreenScaleY">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="GreenScaleZ">
+            </div>
+            <div style="width: 100%; height: 20%;">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="BlueScaleX">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="BlueScaleY">
+                <input style="width: 27%; height: 70%; float: left;" value="0" id="BlueScaleZ">
+            </div>
+        </div>
+        <!-- <div style="width: 20%; height: 75%; float: left;">
+            <div style="width: 100%; height: 20%;">Radius</div>
+            <input style="width: 50%; height: 15%;" value="0" id="RedRadius">
+            <input style="width: 50%; height: 15%;" value="0" id="GreenRadius">
+            <input style="width: 50%; height: 15%;" value="0" id="BlueRadius">
+            <input style="width: 50%; height: 15%;" value="0" id="PlaneRadius">
+        </div>
+        <div style="width: 20%; height: 75%; float: left;">
+            <div style="width: 100%; height: 20%;">Specular</div>
+            <input style="width: 50%; height: 15%;" value="0" id="RedSpecular">
+            <input style="width: 50%; height: 15%;" value="0" id="GreenSpecular">
+            <input style="width: 50%; height: 15%;" value="0" id="BlueSpecular">
+            <input style="width: 50%; height: 15%;" value="0" id="PlaneSpecular">
+        </div>
+        <div style="width: 20%; height: 75%; float: left;">
+            <div style="width: 100%; height: 20%;">Reflection</div>
+            <input style="width: 50%; height: 15%;" value="0" id="RedReflection">
+            <input style="width: 50%; height: 15%;" value="0" id="GreenReflection">
+            <input style="width: 50%; height: 15%;" value="0" id="BlueReflection">
+            <input style="width: 50%; height: 15%;" value="0" id="PlaneReflection">
+        </div> -->
+    </div>
     <script type="module" src="main.js"></script>
-    <!-- <script>
-        var c = document.getElementById("RayTrace");
-        var ctx = c.getContext("2d");
-        ctx.moveTo(0, 0);
-        ctx.lineTo(200, 100);
-        ctx.stroke();
-    </script> -->
 </body>
 </html>

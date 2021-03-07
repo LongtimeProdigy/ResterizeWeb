@@ -47,7 +47,7 @@ var vertices = [
     new Vertex(new Vector3(1, -1, 1),   new Vector3(1, 0, 0), new Vector2(1, 1), new Color(255, 255, 255, 255)), 
     new Vertex(new Vector3(1, 1, 1),    new Vector3(1, 0, 0), new Vector2(1, 0), new Color(255, 255, 255, 255)), 
 
-    // down
+    // down 20~23
     new Vertex(new Vector3(1, -1, -1),  new Vector3(0, -1, 0), new Vector2(0, 0), new Color(255, 255, 255, 255)), 
     new Vertex(new Vector3(-1, -1, -1), new Vector3(0, -1, 0), new Vector2(0, 1), new Color(255, 255, 255, 255)), 
     new Vertex(new Vector3(-1, -1, 1),  new Vector3(0, -1, 0), new Vector2(1, 1), new Color(255, 255, 255, 255)), 
@@ -148,7 +148,7 @@ export default class Model{
         let z = this.transform.rotation.x;
         let temp = new Matrix4x4(
             Math.cos(x)*Math.cos(y) * this.transform.scale.x, Math.cos(x)*Math.sin(y)*Math.sin(z)+Math.sin(x)*Math.cos(z), -Math.cos(x)*Math.sin(y)*Math.cos(z)+Math.sin(x)*Math.sin(z), this.transform.position.x, 
-            -Math.sin(x)*Math.cos(y), -Math.sin(x)*Math.sin(y)*Math.sin(z)+Math.cos(x)*Math.cos(z) * this.transform.scale.y, Math.sin(x)*Math.sin(y)*Math.cos(z)+Math.cos(x)*Math.sin(z), -this.transform.position.y, 
+            -Math.sin(x)*Math.cos(y), -Math.sin(x)*Math.sin(y)*Math.sin(z)+Math.cos(x)*Math.cos(z) * this.transform.scale.y, Math.sin(x)*Math.sin(y)*Math.cos(z)+Math.cos(x)*Math.sin(z), this.transform.position.y, 
             Math.sin(y), -Math.cos(y)*Math.sin(z), Math.cos(y)*Math.cos(z) * this.transform.scale.z, this.transform.position.z, 
             0, 0, 0, 1
         )
@@ -173,21 +173,21 @@ export default class Model{
     RotateXMatrix(){
         return new Matrix3x3(
             1, 0, 0, 
-            0, Math.cos(this.transform.rotation.x), -Math.sin(this.transform.rotation.x), 
-            0, Math.sin(this.transform.rotation.x), Math.cos(this.transform.rotation.x)
+            0, Math.cos(this.transform.rotation.x), Math.sin(this.transform.rotation.x), 
+            0, -Math.sin(this.transform.rotation.x), Math.cos(this.transform.rotation.x)
         )
     }
     RotateYMatrix(){
         return new Matrix3x3(
-            Math.cos(this.transform.rotation.y), 0, -Math.sin(this.transform.rotation.y), 
+            Math.cos(this.transform.rotation.y), 0, Math.sin(this.transform.rotation.y), 
             0, 1, 0, 
-            Math.sin(this.transform.rotation.y), 0, Math.cos(this.transform.rotation.y)
+            -Math.sin(this.transform.rotation.y), 0, Math.cos(this.transform.rotation.y)
         )
     }
     RotateZMatrix(){
         return new Matrix3x3(
-            Math.cos(this.transform.rotation.z), -Math.sin(this.transform.rotation.z), 0, 
-            Math.sin(this.transform.rotation.z), Math.cos(this.transform.rotation.z), 0, 
+            Math.cos(this.transform.rotation.z), Math.sin(this.transform.rotation.z), 0, 
+            -Math.sin(this.transform.rotation.z), Math.cos(this.transform.rotation.z), 0, 
             0, 0, 1
         )
     }
