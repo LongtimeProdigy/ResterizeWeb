@@ -25,7 +25,7 @@ export default class Renderer{
         }
         
         let triangles = this.CullBackFace(model, matrix);
-        model.triangles = triangles;
+        // model.triangles = triangles;
         // console.log(model);
         
         let projected = [];
@@ -51,10 +51,10 @@ export default class Renderer{
         
         let modelRotateMatrix = model.GetRotateMatrix();
         let cameraRotateMatrix
-        for(let j = 0; j < model.triangles.length; ++j){
+        for(let j = 0; j < triangles.length; ++j){
             // if(j == 4){
                 this.DrawFillTriangle(
-                    model.triangles[j], model.vertices, projected
+                    triangles[j], model.vertices, projected
                     , canvas, camera, lights, model.texture, matrix, modelRotateMatrix
                     );
             // }
