@@ -39,6 +39,12 @@
      </style>
 </head>
 <body>
+    <h1>Welcome to Lee's CPU Raytracing</h1>
+    <p>Resterize 방식의 Computer Graphic을 CPU로 작동하게 작성하였습니다.</p>
+    <p>Camera로부터 Viewport 그리고 Canvas까지 구현하여 각 Pixel들을 CPU가 직접 계산합니다.</p>
+    <p>Vertex -> Model, World, Camera, NDC 까지의 회전, 이동행렬을 계산하며</p>
+    <p>Canvas 과정에서 Resterize의 DDA계산과 각 픽셀에서의 FLAT, GOURAUD, PHONG 라이팅을 지원하게 제작되었습니다.</p>
+    <p>모든 코드는 <a href="https://github.com/LongtimeProdigy/ResterizeWeb" target="_blank">Github</a>에 공개되어 있습니다.</p>
     <canvas id="CPU Resterize" width="600" height="600" style="border: 1px grey solid"></canvas>
     <div id="leftupper">
         <div id="side_left">
